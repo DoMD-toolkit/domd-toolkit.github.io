@@ -1,0 +1,378 @@
+
+@import url('https://fonts.loli.net/css2?family=VT323&display=swap');
+
+:root {
+    --terminal-bg: #0a0a0a;
+    --phosphor-main: #33ff33; /* 经典绿 */
+    --phosphor-dim: #1a801a;  /* 暗绿，用于深阴影 */
+    --phosphor-bright: #ccffcc; /* 亮白绿，用于高光 */
+}
+
+body {
+    background-color: #000;
+    margin: 0;
+    height: 100vh;
+    overflow: hidden;
+    font-family: 'VT323', monospace;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: var(--phosphor-main);
+}
+
+.crt-container {
+    width: 95vw;
+    height: 90vh;
+    background-color: var(--terminal-bg);
+    border-radius: 20px;
+    position: relative;
+    box-shadow: 0 0 50px rgba(51, 255, 51, 0.15);
+    border: 1px solid #333;
+    overflow: hidden;
+    transform-origin: center center;
+}
+
+body.shutdown-active .crt-container {
+    animation: turn-off 0.7s cubic-bezier(0.23, 1, 0.32, 1) forwards;
+    box-shadow: none;
+}
+
+.screen {
+    width: 100%;
+    height: 100%;
+    padding: 30px;
+    box-sizing: border-box;
+    overflow-y: auto;
+    position: relative;
+    z-index: 1;
+    text-shadow: 0 0 2px var(--phosphor-dim);
+    font-size: 1.3rem;
+    display: flex;
+    flex-direction: column;
+}
+
+/* 确保内容会被撑开 */
+#terminal-output { flex-grow: 1; }
+
+
+.scanlines {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    /* 核心：确保它在最顶层 */
+    z-index: 10; 
+    /* 核心：允许鼠标穿透点击下面的菜单 */
+    pointer-events: none; 
+    
+    background: linear-gradient(
+        to bottom,
+        rgba(255, 255, 255, 0) 50%,
+        rgba(0, 0, 0, 0.1) 50% /* 线条浓度从 0.3 降到 0.05，更温柔 */
+    );
+    background-size: 100% 6px; /* 线条变稀疏一点，减少压力 */
+    animation: scrollScanlines 10s linear infinite;
+}
+
+/* --- 2. 屏幕遮罩层：负责轻微频闪 --- */
+.screen-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 11;
+    pointer-events: none;
+    background: radial-gradient(circle, rgba(51, 255, 51, 0) 60%, rgba(0, 0, 0, 0.2) 100%);
+    
+    /* 调优：闪烁频率变慢（0.15s -> 3s），变为缓慢呼吸感 */
+    animation: flicker 3s infinite alternate; 
+}
+
+/* --- 3. 内容层：现在它只负责显示和滚动 --- */
+.screen {
+    position: relative; /* 相对定位 */
+    z-index: 1; /* 在特效层下方 */
+    width: 100%;
+    height: 100%;
+    padding: 30px;
+    box-sizing: border-box;
+    overflow-y: auto; /* 滚动依然在这里 */
+    text-shadow: 0 0 2px var(--phosphor-dim);
+}
+
+/* --- 4. 动画参数微调 (更温柔) --- */
+@keyframes flicker { 
+    0% { opacity: 0.98; } 
+    100% { opacity: 1.0; } /* 变化范围极小，肉眼几乎察觉不到闪烁，只有空气感 */
+}
+
+.screen::-webkit-scrollbar { display: none; }
+.screen { -ms-overflow-style: none; scrollbar-width: none; }
+
+
+/* =========================================
+   [修改版] 硬件风格常亮 Logo (温柔版)
+   ========================================= */
+#static-header {
+    margin-bottom: 20px;
+    opacity: 0; 
+    transition: opacity 1s ease-in;
+    /* 增加一点透视感，让上浮更自然 */
+    perspective: 500px;
+}
+
+.hardware-logo {
+    display: inline-block;
+    background-color: var(--phosphor-main);
+    color: #000;
+    
+    /* 字体设置 */
+    font-weight: 900; 
+    font-size: 2.5rem; 
+    padding: 8px 25px; /* 稍微加宽一点 */
+    
+    /* 硬件边框：纯黑，带一点点内阴影模拟凹槽 */
+    border: 0px solid #000; 
+    box-shadow: 
+        inset 0 0 5px rgba(0,0,0,0.3), /* 内部轻微阴影 */
+        0 0 5px rgba(51, 255, 51, 0.2); /* 常态下几乎看不见的外光 */
+    
+    text-transform: uppercase;
+    letter-spacing: 3px;
+    cursor: default;
+    
+    /* 过渡要慢一点，显得沉稳 */
+    transition: all 0.1s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+/* Hover 状态：温柔发光 */
+.hardware-logo:hover {
+    /* 1. 文字变白，这是视觉中心 */
+    color: #ffffff;
+    
+    /* 2. 边框也跟着亮一点，但不刺眼 */
+    border-color: var(--phosphor-dim);
+    
+    /* 3. 微微上浮 (从 -6px 改为 -3px) */
+    transform: translateY(-3px);
+    
+    /* 4. 背景光晕：收敛、柔和 */
+    box-shadow: 
+        inset 0 0 15px rgba(0,0,0,0.2),  /* 保持内部的实体感 */
+        0 5px 10px rgba(0,0,0,0.6),      /* 底部投影，增加悬浮感 */
+        0 0 15px var(--phosphor-dim),    /* 第一层光晕：暗绿 */
+        0 0 30px rgba(51, 255, 51, 0.4); /* 第二层光晕：很淡的扩散 */
+
+    /* 5. 激活动画：只针对文字的呼吸感 */
+    animation: textBreathe 2s ease-in-out infinite alternate;
+}
+
+/* 定义温柔的呼吸动画 */
+@keyframes textBreathe {
+    0% {
+        /* 开始：稍微亮一点 */
+        text-shadow: 
+            0 0 2px #ffffff,
+            0 0 5px var(--phosphor-main);
+    }
+    100% {
+        /* 结束：辉光稍微强一点，模拟电流盈满 */
+        text-shadow: 
+            0 0 5px #ffffff,
+            0 0 10px #ffffff,
+            0 0 20px var(--phosphor-main);
+    }
+}
+
+/* 错误信息：红色 + 红色光晕 */
+.text-error {
+    color: #ff3333;
+    text-shadow: 0 0 5px #ff3333, 0 0 10px #990000;
+    font-weight: bold;
+}
+
+/* 调试信息：琥珀色/橙色 + 金色光晕 */
+.text-debug {
+    color: #ffcc00;
+    text-shadow: 0 0 5px #ffcc00, 0 0 10px #996600;
+}
+
+/* --- [新增] 菜单开机淡入特效 --- */
+.menu-fade-in {
+    /* 0.8秒内，从透明+下沉状态 变为 不透明+原位 */
+    animation: fadeInUp 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+    opacity: 0; /* 初始状态设为不可见 */
+}
+
+@keyframes fadeInUp {
+    0% {
+        opacity: 0;
+        transform: translateY(20px); /* 稍微往下沉一点 */
+    }
+    100% {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+/* =========================================
+   [修改版] 图片容器与特效
+   ========================================= */
+.img-container {
+    margin: 15px 0; /* 默认靠左，上下留空 */
+    border: 1px dashed var(--phosphor-dim);
+    padding: 5px;
+    
+    /* [修改] 改为块级元素，方便居中控制 */
+    display: block; 
+    /* [修改] 默认最大宽度 300px */
+    max-width: 300px;
+    /* 让容器宽度贴合图片内容，不要占满一行 */
+    width: fit-content; 
+}
+
+
+
+
+/* --- 以下为原有样式，保持不变 --- */
+.output-line { margin-bottom: 0.5rem; white-space: pre-wrap; word-break: break-word; display: block; }
+.error-msg { color: #ff3333; font-weight: bold; background: rgba(255, 0, 0, 0.1); border: 1px solid #ff3333; padding: 5px; margin: 10px 0; display: inline-block; text-shadow: 0 0 5px #ff3333; }
+.img-container {
+    margin: 15px 0; /* 默认靠左，上下留空 */
+    border: 1px dashed var(--phosphor-dim);
+    padding: 5px;
+    
+    /* [修改] 改为块级元素，方便居中控制 */
+    display: block; 
+    /* [修改] 默认最大宽度 300px */
+    max-width: 300px;
+    /* 让容器宽度贴合图片内容，不要占满一行 */
+    width: fit-content; 
+	image-rendering: pixelated;
+	image-rendering: -webkit-optimize-contrast;
+	image-rendering: crisp-edges;
+	
+}
+
+.scan-effect {
+    display: block;
+    width: 100%; 
+    height: auto; 
+    
+    /* 扫描动画机制保持不变 */
+    clip-path: inset(0 0 100% 0);
+    transition: clip-path 3s linear;
+    
+    /* --- [核心修改区] 温和的彩电滤镜 --- */
+    filter: 
+        /* 1. 极轻微的暖色调，避免冷冰冰的数码感，但绝不变黄 */
+        sepia(5%)          
+        
+        /* 2. 提高对比度，模拟 CRT 荧光屏的发光特性，画面更立体 */
+        contrast(1.15)     
+        
+        /* 3. 稍微降低亮度，防止高光刺眼，配合背景的暗环境 */
+        brightness(0.95)   
+        
+        /* 4. 稍微提高饱和度，让色彩在暗环境下也能跳出来 */
+        saturate(1.1)      
+        
+        /* 5. 关键点：极轻微的模糊。模拟模拟信号不锐利的边缘 */
+        /* 这能有效消除现代图片过于清晰的数码味 */
+        blur(0.6px);       
+
+    /* 稍微一点点透明，让背景的黑色透上来一点，增加融合感 */
+    opacity: 0.95;
+    
+    /* [重要] 去掉了 mix-blend-mode，保证颜色准确还原 */
+}
+
+.scan-effect.loaded {
+    clip-path: inset(0 0 0 0);
+}
+/* --- [新增] 修饰符类 --- */
+
+/* 宽版模式：允许最大宽度到 600px */
+.img-container.wide {
+    max-width: 600px;
+}
+
+.img-container.small {
+    max-width: 200px;
+}
+
+/* 居中模式：利用自动边距居中 */
+.img-container.center {
+    margin: 15px auto;
+}
+
+
+.code-panel { border: 2px solid var(--phosphor-main); margin: 15px 0; background: rgba(0, 20, 0, 0.9); position: relative; max-width: 90%; box-shadow: 5px 5px 0px rgba(51, 255, 51, 0.2); }
+.code-header { background: var(--phosphor-main); color: #000; padding: 2px 8px; font-weight: bold; font-size: 0.8em; text-transform: uppercase; border-bottom: 1px solid var(--phosphor-main); display: flex; justify-content: space-between; }
+.code-body { padding: 15px; font-family: 'Courier New', Courier, monospace; font-size: 0.95em; color: var(--phosphor-bright); white-space: pre; overflow-x: auto; line-height: 1.5; }
+.token-keyword { color: #ff55ff; text-shadow: 0 0 5px #ff55ff; font-weight: bold; }
+.token-string  { color: #ffff55; text-shadow: 0 0 5px #ffff55; }
+.token-comment { color: #668866; font-style: italic; text-shadow: none; }
+.token-number  { color: #ffaa55; }
+.menu-container { margin: 20px 0; border: 1px dashed var(--phosphor-dim); padding: 10px; }
+.menu-item { padding: 5px 10px; cursor: pointer; transition: all 0.1s; border-left: 3px solid transparent; }
+.menu-item.active { background-color: var(--phosphor-main); color: #000; font-weight: bold; border-left: 3px solid #000; box-shadow: 0 0 15px var(--phosphor-main); text-shadow: none;}
+.input-line { display: flex; align-items: center; margin-top: 10px; }
+.prompt { color: var(--phosphor-main); margin-right: 10px; font-weight: bold; }
+@keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+@keyframes flicker { 0% { opacity: 0.98; } 50% { opacity: 1.0; } 100% { opacity: 0.99; } }
+@keyframes scrollScanlines { from { background-position: 0 0; } to { background-position: 0 100%; } }
+@keyframes turn-off { 0% { transform: scale(1, 1) skew(0deg); filter: brightness(1); opacity: 1; } 40% { transform: scale(1, 0.002) skew(10deg); filter: brightness(5); opacity: 1; } 60% { transform: scale(0.01, 0.002) skew(0deg); filter: brightness(5); opacity: 1; } 100% { transform: scale(0, 0); filter: brightness(0); opacity: 0; } }
+.cursor { display: inline-block; width: 10px; height: 1.2em; background-color: var(--phosphor-main); animation: blink 1s step-end infinite; vertical-align: middle; }
+
+/* =========================================
+   [新增] CRT 复古调色盘 (Retro Color Palette)
+   用法: <span class="crt-red">Text</span>
+   ========================================= */
+
+/* 1. 报警红 (Alert Red) - 用于错误、警告、禁止 */
+.crt-red { color: #ff3333; text-shadow: 0 0 5px #ff3333; }
+
+/* 2. 琥珀金 (Amber) - 经典的单色显示器颜色，用于日志、调试 */
+.crt-amber { color: #ffcc00; text-shadow: 0 0 5px #ffcc00; }
+
+/* 3. 赛博蓝 (Cyber Blue) - 用于链接、信息、水冷 */
+.crt-blue { color: #00ccff; text-shadow: 0 0 5px #00ccff; }
+
+/* 4. 放射紫 (Radioactive Purple) - 用于特殊关键字、魔法 */
+.crt-purple { color: #cc33ff; text-shadow: 0 0 5px #cc33ff; }
+
+/* 5. 黑客绿 (Matrix Green) - 默认颜色，但更亮一点 */
+.crt-green { color: #33ff33; text-shadow: 0 0 5px #33ff33; }
+
+/* 6. 等离子粉 (Plasma Pink) - 用于高亮强调 */
+.crt-pink { color: #ff00cc; text-shadow: 0 0 5px #ff00cc; }
+
+/* 7. 幽灵白 (Ghost White) - 用于正文、标题 */
+.crt-white { color: #ffffff; text-shadow: 0 0 5px #ffffff; }
+
+/* 8. 终端灰 (Terminal Grey) - 用于注释、次要信息 */
+.crt-grey { color: #888888; text-shadow: none; }
+
+/* --- 进阶功能色 --- */
+
+/* 9. 反色块 (Inverted) - 像被光标选中一样 */
+.crt-inv { 
+    background-color: var(--phosphor-main); 
+    color: #000; 
+    padding: 0 4px;
+}
+
+/* 10. 闪烁红 (Blinking Red) - 紧急情况 */
+.crt-blink-red {
+    color: #ff0000;
+    animation: blink 0.5s step-end infinite;
+}
+
+/* 11. 标题下划线 (Underline) */
+.crt-u {
+    border-bottom: 2px solid var(--phosphor-main);
+    display: inline-block;
+    line-height: 1.2;
+}
