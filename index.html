@@ -108,7 +108,7 @@
 			   原代码: steps(15, end) -> 分15次跳跃，导致卡顿
 			   新代码: linear         -> 线性匀速，丝滑扫描
 			*/
-			animation: scan-load 3.5s linear forwards;
+			animation: scan-load 4s linear forwards;
 		}
 
 		/* scan-load 关键帧保持不变 */
@@ -309,7 +309,7 @@
                                 div.innerHTML = line; 
                                 outputDiv.appendChild(div);
                                 scrollToBottom();
-                                await sleep(2600); // 等待扫描动画
+                                await sleep(4050); // 等待扫描动画
                             } catch (e) {
                                 outputDiv.removeChild(loadingDiv);
                                 div.innerHTML = `<span class="error-msg">[ERROR] Image corrupted</span>`;
