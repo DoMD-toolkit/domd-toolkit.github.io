@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DoMD-Toolkit Terminal</title>
+    <link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --phosphor-main: #33ff00;
+            --phosphor-dim: #1a8000;
+            --bg-color: #050505;
+            --font-size: 1.5rem;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            background-color: #000;
+            margin: 0;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: 'VT323', monospace;
+            overflow: hidden;
+            color: var(--phosphor-main);
+        }
+
+        /* 终端外壳 */
+        .crt-frame {
+            width: 95vw;
+            height: 90vh;
+            background: var(--bg-color);
+            border: 3px solid #333;
+            border-radius: 10px;
+            position: relative;
+            overflow: hidden;
+            box-shadow: inset 0 0 60px rgba(0,0,0,0.7), 0 0 15px rgba(51, 255, 0, 0.1);
+        }
+
+        /* 屏幕区域 */
+        .screen {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            padding: 30px;
+            overflow-y: auto; /* 允许滚动 */
+            font-size: var(--font-size);
+            text-shadow: 0 0 4px var(--phosphor-dim);
+            scrollbar-width: none; /* 隐藏滚动条 (Firefox) */
+        }
+        .screen::-webkit-scrollbar { display: none; } /* 隐藏滚动条 (Chrome/Safari) */
+
+        /* CRT 扫描线 */
+        .crt-overlay {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.1) 50%),
+                        linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+            background-size: 100% 3px, 3px 100%;
+            pointer-events: none;
+            z-index: 99;
+            animation: flicker 0.15s infinite;
+        }
+
+        @keyframes flicker {
+            0% { opacity: 0.97; }
+            50% { opacity: 1; }
+            100% { opacity: 0.98; }
+        }
+
+        /* ASCII Art */
+        .ascii-art {
+            font-family: 'VT323', monospace;
+            white-space: pre;
+            font-size: 14px;
+            line-height: 14px;
+            margin-bottom: 20px;
+            color: var(--phosphor-main);
+        }
+
+        /* 输入行布局 */
+        .input-line {
+            display: block; /* 改为 block 避免 flex 导致的某些对齐问题 */
+            word-wrap: break-word;
+        }
+        
+        .prompt {
+            margin-right: 8px;
+            white-space: nowrap;
+            float: left; /* 让提示符浮动，内容紧随其后 */
+        }
+
+        #typed-content {
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+
+        /* 光标样式 - 紧贴文字 */
+        .cursor {
+            display: inline;
+            color: var(--phosphor-main);
+            animation: blink 1s step-end infinite;
+            vertical-align: baseline;
+        }
+
+        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+
+        /* 隐藏输入框 - 关键修复：放在底部防止页面跳动 */
+        #hidden-input {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            opacity: 0;
+            width: 1px;
+            height: 1px;
+            pointer-events: none;
+        }
+
+        /* 文件/目录颜色 */
+        .dir-name { color: #5dade2; font-weight: bold; }
+        .file-name { color: var(--phosphor-main); }
+        .error-msg { color: #e74c3c; }
+
+        .output-line { margin-bottom: 5px; clear: both; }
+        
+        /* 图片样式 */
+		/* 图片样式 - 逐行加载版 */
+		.crt-image {
+			display: block;
+			max-width: 100%; /* 让它撑满容器宽度，或根据需要设置固定宽 */
+			width: 400px;    /* 示例宽度 */
+			margin: 15px 0;
+			border: 2px solid var(--phosphor-main);
+			
+			/* 1. 恢复原色，保留一点对比度让它像老屏幕 */
+			filter: contrast(1.2) brightness(1.1); 
+			
+			/* 2. 强制像素化，拒绝模糊 */
+			image-rendering: pixelated; 
+			
+			/* 3. 初始状态：完全被裁剪（看不见） */
+			clip-path: inset(0 0 100% 0);
+			
+			/* 4. 执行加载动画：2秒内完成，分15次“跳跃”显示，模拟数据包 */
+			animation: scan-load 2s steps(15, end) forwards;
+		}
+
+		/* 定义逐行扫描动画 */
+		@keyframes scan-load {
+			0% {
+				clip-path: inset(0 0 100% 0); /* 裁剪掉底部 100% */
+			}
+			100% {
+				clip-path: inset(0 0 0 0);    /* 完全不裁剪 */
+			}
+		}
+    </style>
+</head>
+<body>
+
+<div class="crt-frame">
+    <div class="crt-overlay"></div>
+    <div class="screen" id="screen">
+        <div id="ascii-container"></div>
+        <div id="output"></div>
+        
+        <div class="input-line">
+            <span class="prompt">
+                <span id="p-user">guest@domd</span>:<span id="p-path">/</span>$
+            </span>
+            <span id="typed-content"></span><span class="cursor">_</span>
+        </div>
+        
+        <input type="text" id="hidden-input" autocomplete="off" spellcheck="false">
+    </div>
+</div>
+
+<script>
+    /* --- 1. 数据结构 --- */
+    const fs = {
+        '/': {
+            type: 'dir',
+            children: {
+                'about.txt': { type: 'file', content: ["SYSTEM: DoMD-Toolkit v1.0", "KERNEL: Python >= 3.12", "STATUS: Online"] },
+                'members': { 
+                    type: 'dir', 
+                    children: {
+                        'myron-li.txt': { type: 'file', content: ["NAME: Ming-yang Li", "ROLE: Researcher", '<img src="//images/mingyang-li.jpg" class="crt-image">']},
+                        'ruishi.txt': { type: 'file', content: ["NAME: Rui Shi", "ROLE: Archmage", '<img src="//images/Doraemon_character.png" class="crt-image">', 'Publications:'], url:'//contents/ruishi.txt'},
+						},
+                    } 
+                },
+                'projects': { 
+                    type: 'dir', 
+                    children: {
+                        'chem_ai': { type: 'dir', children: {} },
+                        'notes.txt': { type: 'file', content: ["Project pending..."] }
+                    }
+                }
+            }
+        }
+    };
+
+    /* --- 2. 全局状态 --- */
+    let currentPath = []; // 路径栈
+    
+    /* --- 3. DOM 元素 --- */
+    const hiddenInput = document.getElementById('hidden-input');
+    const typedContent = document.getElementById('typed-content');
+    const outputDiv = document.getElementById('output');
+    const pathSpan = document.getElementById('p-path');
+    const screenDiv = document.getElementById('screen');
+    const asciiContainer = document.getElementById('ascii-container');
+
+    /* --- 4. 核心逻辑 --- */
+    
+    // 获取当前目录对象
+    function getCurrentDirObj() {
+        let dir = fs['/'];
+        for (let p of currentPath) {
+            dir = dir.children[p];
+        }
+        return dir;
+    }
+
+    // 滚动到底部
+    function scrollToBottom() {
+        screenDiv.scrollTop = screenDiv.scrollHeight;
+    }
+
+    // 延时函数
+    const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+
+    // 输出文本 (支持 HTML 和 打字机效果)
+    async function printText(lines, delay = 10) {
+        for (let line of lines) {
+            const div = document.createElement('div');
+            div.className = 'output-line';
+            outputDiv.appendChild(div);
+
+			if (line.includes('<img')) {
+				div.innerHTML = line;
+				// 这里的 img 标签已经带有了 class="crt-image"，CSS 动画会自动触发
+				outputDiv.appendChild(div);
+				scrollToBottom();
+				
+				// JS 只需要“暂停”一下，等待 CSS 的 2s 动画播完，
+				// 否则图片还没打完，光标就跳出来了，不真实。
+				await sleep(2100);  
+            } else {
+                // 文本逐字打印
+                if (delay > 0) {
+                    let txt = "";
+                    // 简单的 HTML 标签检测，防止拆开 HTML 标签
+                    if (line.startsWith('<')) {
+                         div.innerHTML = line;
+                    } else {
+                        for (let char of line) {
+                            txt += char;
+                            div.innerText = txt;
+                            scrollToBottom(); // 每打一个字都滚动
+                            await sleep(10);
+                        }
+                    }
+                } else {
+                    div.innerHTML = line;
+                }
+            }
+            scrollToBottom();
+            await sleep(delay);
+        }
+    }
+
+	// --- 新增核心工具：路径解析器 ---
+    // 输入路径字符串，返回对应的文件/目录对象，找不到返回 null
+    function resolvePath(pathStr) {
+        if (!pathStr) return null;
+        
+        // 1. 确定起点
+        let node = (pathStr.startsWith('/')) ? fs['/'] : getCurrentDirObj();
+        
+        // 2. 拆分路径 (去除空项和多余的 /)
+        const parts = pathStr.split('/').filter(p => p && p !== '.');
+        
+        // 3. 逐层遍历
+        for (let p of parts) {
+            if (p === '..') {
+                // 处理 .. (暂时简单处理：不支持多层回退，仅作为一个占位符逻辑，或者你可以维护父级引用)
+                // 由于目前结构简单，我们假设 .. 在根目录无效，否则回到上一级
+                // *注：为了完美支持 ..，你需要重构 fs 加上 parent 引用，但这里为了满足你的下一级需求，
+                // 我们主要关注向下查找*
+                return null; // 暂不支持复杂 .. 跳转，专注于 members/file 这种向下查找
+            }
+            
+            if (node.children && node.children[p]) {
+                node = node.children[p];
+            } else {
+                return null; // 路径断了
+            }
+        }
+        return node;
+    }
+
+    // 执行命令
+    async function execute(input) {
+        const cleanInput = input.trim();
+        if (!cleanInput) { scrollToBottom(); return; }
+        
+        const parts = cleanInput.split(/\s+/);
+        const cmd = parts[0].toLowerCase();
+        const arg = parts[1];
+
+        // 回显命令
+        const historyLine = document.createElement('div');
+        historyLine.className = 'output-line';
+        historyLine.innerHTML = `<span style="opacity:0.7">guest@domd:${pathSpan.innerText}$</span> ${cleanInput}`;
+        outputDiv.appendChild(historyLine);
+
+        switch (cmd) {
+            case 'help':
+                await printText([
+                    "DoMD-Toolkit Shell v1.0",
+                    "-----------------------",
+                    "ls [dir/file] : List contents",
+                    "cd [dir]      : Change directory (.. for up)",
+                    "cat [file]    : Read file",
+                    "clear         : Clear screen"
+                ]);
+                break;
+
+            case 'clear':
+                outputDiv.innerHTML = '';
+                break;
+
+			case 'ls':
+                let targetObj = getCurrentDirObj(); // 默认 ls 当前目录
+                let targetName = "";
+
+                if (arg) {
+                    // 使用新工具查找目标
+                    const found = resolvePath(arg);
+                    if (found) {
+                        targetObj = found;
+                        targetName = arg;
+                    } else {
+                        await printText([`<span class="error-msg">ls: cannot access '${arg}': No such file or directory</span>`]);
+                        break;
+                    }
+                }
+
+                if (targetObj.type === 'dir') {
+                    const keys = Object.keys(targetObj.children || {}).sort();
+                    if (keys.length === 0) {
+                        await printText(["(empty)"]);
+                    } else {
+                        const fmt = keys.map(k => {
+                            const item = targetObj.children[k];
+                            if (item.type === 'dir') return `<span class="dir-name">${k}/</span>`;
+                            return `<span class="file-name">${k}</span>`;
+                        }).join('  ');
+                        await printText([fmt], 0);
+                    }
+                } else if (targetObj.type === 'file') {
+                    // 如果路径结尾有 / 但它其实是个文件 (如 ls about.txt/)，Unix通常会报错，但这里我们宽容处理
+                    await printText([`<span class="file-name">${arg}</span>`], 0);
+                }
+                break;
+
+            case 'cd':
+                if (!arg || arg === '/') {
+                    currentPath = [];
+                } else if (arg === '..' || arg === '../') {
+                    if (currentPath.length > 0) currentPath.pop();
+                } else {
+                    // 简单单层 cd 支持，如需多层需递归解析
+                    const curr = getCurrentDirObj();
+                    const cleanArg = arg.endsWith('/') ? arg.slice(0, -1) : arg;
+                    
+                    if (curr.children && curr.children[cleanArg] && curr.children[cleanArg].type === 'dir') {
+                        currentPath.push(cleanArg);
+                    } else {
+                        await printText([`<span class="error-msg">cd: ${arg}: No such directory</span>`]);
+                    }
+                }
+                pathSpan.innerText = currentPath.length ? '/' + currentPath.join('/') : '/';
+                break;
+
+			case 'cat':
+                if (!arg) {
+                    await printText(["Usage: cat [filename]"]);
+                    break;
+                }
+                
+                // 使用 resolvePath 查找 (确保你保留了之前添加的 resolvePath 函数)
+                const target = resolvePath(arg);
+
+                if (!target) {
+                    await printText([`<span class="error-msg">cat: ${arg}: No such file</span>`]);
+                } 
+                else if (target.type === 'dir') {
+                    await printText([`<span class="error-msg">cat: ${arg}: Is a directory</span>`]);
+                } 
+                else if (target.type === 'file') {
+                    // --- 核心修改开始 ---
+                    
+                    // 1. 开始时锁定输入，防止打断
+                    hiddenInput.disabled = true;
+
+                    // 2. 先处理本地 Content (如果有)
+                    if (target.content) {
+                        await printText(target.content, 50);
+                    }
+
+                    // 3. 再处理远程 URL (如果有)
+                    // 注意这里不再用 else if，而是直接 if，实现顺序执行
+                    if (target.url) {
+                        // 如果前面已经打印了 content，这里加个分割线，体验更好
+                        if (target.content) {
+                            await printText(["", "--- FETCHING REMOTE DATA ---", ""], 20);
+                        } else {
+                            await printText([`Connecting to ${target.url}...`], 20);
+                        }
+
+                        try {
+                            // 模拟网络握手延迟
+                            await sleep(500); 
+
+                            const response = await fetch(target.url);
+                            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+                            const text = await response.text();
+                            
+                            // 按换行符切割，逐行打印
+                            const lines = text.split('\n');
+                            
+                            // 显示一点元数据装装样子
+                            await printText([`200 OK`, `Content-Length: ${text.length} bytes`, "Downloading..."], 10);
+                            await printText(["----------------------------------------"], 0);
+                            
+                            // 打印远程内容
+                            await printText(lines, 30);
+
+                        } catch (err) {
+                            await printText([`<span class="error-msg">Connection failed: ${err.message}</span>`]);
+                        }
+                    }
+
+                    // 4. 全部执行完后，解锁输入
+                    hiddenInput.disabled = false;
+                    hiddenInput.focus();
+                    
+                    // --- 核心修改结束 ---
+                }
+                break;
+
+            default:
+                await printText([`<span class="error-msg">bash: ${cmd}: command not found</span>`]);
+        }
+        scrollToBottom();
+    }
+
+    /* --- 5. 事件监听 --- */
+    
+    // 自动聚焦
+    document.body.addEventListener('click', () => hiddenInput.focus());
+
+    // 输入同步
+    hiddenInput.addEventListener('input', () => {
+        typedContent.innerText = hiddenInput.value;
+        scrollToBottom();
+    });
+
+    hiddenInput.addEventListener('keydown', async (e) => {
+        if (e.key === 'Enter') {
+            const val = hiddenInput.value;
+            hiddenInput.value = '';
+            typedContent.innerText = '';
+            await execute(val);
+        }
+        
+		// Tab 补全
+        if (e.key === 'Tab') {
+            e.preventDefault();
+            const val = hiddenInput.value;
+            // 获取光标前的最后一个单词 (处理 ls members/ali...)
+            const parts = val.split(/\s+/);
+            const currentInput = parts[parts.length - 1]; // 例如 "members/ali"
+
+            if (!currentInput) return;
+
+            let matches = [];
+            let prefix = ""; // 用于拼接补全后的结果 (例如 "members/")
+
+            // 1. 如果没有斜杠，且是第一个单词 -> 补全命令
+            if (parts.length === 1 && !currentInput.includes('/')) {
+                const cmds = ['ls', 'cd', 'cat', 'help', 'clear'];
+                matches = cmds.filter(c => c.startsWith(currentInput));
+            } 
+            // 2. 补全路径 (文件或文件夹)
+            else {
+                // 核心逻辑：分离 "目录部分" 和 "待补全文件名"
+                // 例如输入 "members/ali" -> dirPart="members", searchPrefix="ali"
+                // 例如输入 "abo" -> dirPart="", searchPrefix="abo"
+                
+                let dirObj = getCurrentDirObj(); // 默认在当前目录找
+                let searchPrefix = currentInput;
+                
+                const lastSlashIndex = currentInput.lastIndexOf('/');
+                
+                if (lastSlashIndex !== -1) {
+                    // 如果包含路径 (例如 members/ali)
+                    const pathStr = currentInput.substring(0, lastSlashIndex); // "members"
+                    searchPrefix = currentInput.substring(lastSlashIndex + 1); // "ali"
+                    prefix = pathStr + "/"; // 记录前缀用于最后拼接
+                    
+                    // 去找这个父目录
+                    const parentDir = resolvePath(pathStr);
+                    if (parentDir && parentDir.type === 'dir') {
+                        dirObj = parentDir;
+                    } else {
+                        return; // 父目录不存在，无法补全
+                    }
+                }
+
+                // 在目标目录中查找匹配项
+                const candidates = Object.keys(dirObj.children || {});
+                matches = candidates.filter(c => c.startsWith(searchPrefix));
+            }
+
+            if (matches.length === 1) {
+                let matchName = matches[0];
+                let completion = prefix + matchName; // 拼接路径: members/ + alice.txt
+                
+                // 检查是否是目录，如果是，补一个 /
+                // 注意：我们需要重新解析一下确认它是不是目录
+                // 这里为了简单，我们临时拼凑一个完整路径去查一下类型
+                // 如果是命令补全，不需要查类型
+                if (parts.length > 1 || currentInput.includes('/')) {
+                     // 既然我们已经有了 dirObj (父目录) 和 matchName (文件名)
+                     // 直接查 dirObj 即可
+                     // 重新获取一下 dirObj (为了复用上面的变量，这里逻辑稍微冗余一点但安全)
+                     let checkDir = getCurrentDirObj();
+                     const lastSlash = currentInput.lastIndexOf('/');
+                     if (lastSlash !== -1) {
+                         const p = currentInput.substring(0, lastSlash);
+                         checkDir = resolvePath(p); 
+                     }
+                     
+                     if (checkDir && checkDir.children[matchName].type === 'dir') {
+                         completion += '/';
+                     }
+                } else {
+                    completion += ' '; // 命令补全加空格
+                }
+                
+                parts[parts.length - 1] = completion;
+                hiddenInput.value = parts.join(' ');
+                typedContent.innerText = hiddenInput.value;
+            }
+        }
+    });
+
+    /* --- 6. 初始化 --- */
+    window.onload = () => {
+        const asciiLogo = 
+` ____        __  __ ____   _____           _ _    _ _   
+|  _ \\  ___ |  \\/  |  _ \\ |_   _|__   ___ | | | _(_) |_ 
+| | | |/ _ \\| |\\/| | | | |  | |/ _ \\ / _ \\| | |/ / | __|
+| |_| | (_) | |  | | |_| |  | | (_) | (_) |   <| | |_  
+|____/ \\___/|_|  |_|____/   |_|\\___/ \\___/|_|_|\\_\\_|\\__| v1.0`;
+
+        const pre = document.createElement('pre');
+        pre.className = 'ascii-art';
+        pre.textContent = asciiLogo;
+        asciiContainer.appendChild(pre);
+
+        printText([
+            "Welcome to DoMD-Toolkit.",
+            "Type 'help' for instructions."
+        ]);
+        hiddenInput.focus();
+    };
+</script>
+</body>
+</html>
