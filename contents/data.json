@@ -12,7 +12,8 @@
     {
       "label": "ABOUT PROJECT",
       "type": "file",
-      "content": "PROJECT: DoMD-Toolkit\nVERSION: 1.0.0\n\nThe Doraemon-ish toolkit for MD simulations.\n\n[[IMG: https://www.domd.today/images/DoMD-logo.png | DIAGRAM ]]"
+      "content": "PROJECT: DoMD-Toolkit\nVERSION: 1.0.0\n\nThe Doraemon-ish toolkit for MD simulations.\n\n[[IMG: https://www.domd.today/images/DoMD-logo.png | LOGO ]]\n",
+	  "_content": "\n\n[[IMG: https://www.domd.today/images/DoMD-logo.png | LOGO ]]\n\nTESTING NEW IMAGE MODES:\n\n1. Default (Left, Max 300px):\n[[IMG: https://placehold.co/400x200/000000/33ff33/png?text=DEFAULT | Default Mode ]]\n\n2. Wide Mode (Left, Max 600px):\n[[IMG: https://placehold.co/700x250/000000/33ff33/png?text=WIDE+MODE | Wide Mode | wide ]]\n\n3. Center Mode (Center, Max 300px):\n[[IMG: https://placehold.co/400x200/000000/33ff33/png?text=CENTERED | Center Mode | center ]]\n\n4. Wide + Center Mode:\n[[IMG: https://placehold.co/700x250/000000/33ff33/png?text=WIDE+AND+CENTERED | Wide Center | wide | center ]]\n\n[[CODE: chem.py]]\ndef run(): pass\n[[ENDCODE]]\n\n Code and image Examples"
     },
     {
       "label": "TEAM & CVs",
@@ -25,12 +26,12 @@
             {
               "label": "Ming-Yang Li (Lead)",
               "type": "file",
-              "content": "NAME: Ming-Yang Li\nROLE: Lead\n[[IMG: https://www.domd.today/images/mingyang-li.jpg | PHOTO]]\nBIO: Dynamics in coarse-grained molecular dynamics simulations.\nEmail: limy1619 AT mails.jlu.edu.cn\nCode\n[[CODE: chem.py]]\ndef run(): pass\n[[ENDCODE]]"
+              "content": "<span class='crt-blue'>NAME:</span> Ming-Yang Li\n<span class='crt-blue'>ROLE:</span> Lead\n[[IMG: https://www.domd.today/images/mingyang-li.jpg | PHOTO | small ]]\n<span class='crt-blue'>BIO:</span> Dynamics in coarse-grained molecular dynamics simulations.\n<span class='crt-blue'>Email:</span> limy1619 AT mails.jlu.edu.cn\n"
             },
 			{
               "label": "Rui Shi (Lead)",
               "type": "file",
-              "content": "NAME: Rui Shi\nROLE: Archmage\n[[IMG: https://www.domd.today/images/ruishi.jpg | PHOTO]]\nBIO: Fireball! Lightning Bolt! Turn you into gay!\nCode\n[[CODE: chem.py]]\ndef run(): pass\n[[ENDCODE]]"
+              "content": "<span class='crt-blue'>NAME:</span> Rui Shi\n<span class='crt-blue'>ROLE:</span> Archmage\n[[IMG: https://www.domd.today/images/ruishi.jpg | PHOTO | small ]]\n<span class='crt-blue'>BIO:</span> Fireball! Lightning Bolt! <span class='crt-purple'>Turn you into gay!</span>\n<span class='crt-blue'>Publications:</span>\n1. Ji-Yuan Xing, Sheng Li, Rui Shi*, Zhong-Yuan Lu*，Fine-Tuning Gradient Copolymers with Diverse and Controlled Microstructure and Mechanical Properties via Monomer Sequence Distribution: An In Silico Study，Macromolecules, 2024, 57(1), 385–395.\n2. Mechanism of periodic field driven self-assembly process, The Journal of Chemical Physics, Duo Xu; Rui Shi*; Zhao-Yan Sun; Zhong-Yuan Lu*\n"
 			}
           ]
         }
@@ -43,7 +44,7 @@
 		{
 			"label": "2024-2025",
 			"type": "file",
-			"content": "1. Ji-Yuan Xing, Sheng Li, Rui Shi*, Zhong-Yuan Lu*，Fine-Tuning Gradient Copolymers with Diverse and Controlled Microstructure and Mechanical Properties via Monomer Sequence Distribution: An In Silico Study，Macromolecules, 2024, 57(1), 385–395."
+			"content": "1. Ji-Yuan Xing, Sheng Li, Rui Shi*, Zhong-Yuan Lu*，Fine-Tuning Gradient Copolymers with Diverse and Controlled Microstructure and Mechanical Properties via Monomer Sequence Distribution: An In Silico Study，<span style='font-style: italic;'>Macromolecules</span>, <span style='font-weight: bold;'>2024</span>, 57(1), 385–395."
 		}
 		]
 	},
