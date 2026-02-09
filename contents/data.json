@@ -1,0 +1,61 @@
+{
+  "sys": {
+    "boot_msg": "CONNECTING TO REMOTE DATA NODE...",
+    "news": [
+      "[2026-02-10] System upgraded to JSON architecture.",
+      "[2026-02-10] New version online: https://github.com/DoMD-toolkit/DoMD",
+	  "[2026-02-10] ChemFast 1.0.0 released: https://github.com/DoMD-toolkit/DoMD/releases/tag/v1.0.0",
+      "NOTICE: Data is now fetched asynchronously."
+    ]
+  },
+  "root": [
+    {
+      "label": "ABOUT PROJECT",
+      "type": "file",
+      "content": "PROJECT: DoMD-Toolkit\nVERSION: 1.0.0\n\nThe Doraemon-ish toolkit for MD simulations.\n\n[[IMG: https://www.domd.today/images/DoMD-logo.png | DIAGRAM ]]"
+    },
+    {
+      "label": "TEAM & CVs",
+      "type": "menu",
+      "items": [
+        {
+          "label": "Core Members",
+          "type": "menu",
+          "items": [
+            {
+              "label": "Ming-Yang Li (Lead)",
+              "type": "file",
+              "content": "NAME: Ming-Yang Li\nROLE: Lead\n[[IMG: https://www.domd.today/images/mingyang-li.jpg | PHOTO]]\nBIO: Dynamics in coarse-grained molecular dynamics simulations.\nEmail: limy1619 AT mails.jlu.edu.cn\nCode\n[[CODE: chem.py]]\ndef run(): pass\n[[ENDCODE]]"
+            },
+			{
+              "label": "Rui Shi (Lead)",
+              "type": "file",
+              "content": "NAME: Rui Shi\nROLE: Archmage\n[[IMG: https://www.domd.today/images/ruishi.jpg | PHOTO]]\nBIO: Fireball! Lightning Bolt! Turn you into gay!\nCode\n[[CODE: chem.py]]\ndef run(): pass\n[[ENDCODE]]"
+			}
+          ]
+        }
+      ]
+    },
+	{
+		"label": "Publications",
+		"type": "menu",
+		"items": [
+		{
+			"label": "2024-2025",
+			"type": "file",
+			"content": "1. Ji-Yuan Xing, Sheng Li, Rui Shi*, Zhong-Yuan Lu*，Fine-Tuning Gradient Copolymers with Diverse and Controlled Microstructure and Mechanical Properties via Monomer Sequence Distribution: An In Silico Study，Macromolecules, 2024, 57(1), 385–395."
+		}
+		]
+	},
+    {
+      "label": "CLEAR SCREEN",
+      "type": "action",
+      "func": "clear"
+    },
+    {
+      "label": "SHUTDOWN",
+      "type": "action",
+      "func": "shutdown"
+    }
+  ]
+}
