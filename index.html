@@ -90,22 +90,32 @@
         .output-line { margin-bottom: 5px; clear: both; }
 
         /* 图片特效 (保留) */
-        .crt-image {
-            display: block;
-            max-width: 100%;
-            width: 400px;
-            margin: 15px 0;
-            border: 2px solid var(--phosphor-main);
-            filter: contrast(1.2) brightness(1.1);
-            image-rendering: pixelated;
-            clip-path: inset(0 0 100% 0);
-            opacity: 1;
-            animation: scan-load 2.5s steps(15, end) forwards;
-        }
-        @keyframes scan-load {
-            0% { clip-path: inset(0 0 100% 0); }
-            100% { clip-path: inset(0 0 0 0); }
-        }
+		.crt-image {
+			display: block;
+			max-width: 100%;
+			width: 400px;
+			margin: 15px 0;
+			border: 2px solid var(--phosphor-main);
+			
+			filter: contrast(1.2) brightness(1.1);
+			image-rendering: pixelated;
+			
+			/* 初始状态：下方 100% 被裁剪（看不见） */
+			clip-path: inset(0 0 100% 0);
+			opacity: 1;
+
+			/* 关键修改：
+			   原代码: steps(15, end) -> 分15次跳跃，导致卡顿
+			   新代码: linear         -> 线性匀速，丝滑扫描
+			*/
+			animation: scan-load 3.5s linear forwards;
+		}
+
+		/* scan-load 关键帧保持不变 */
+		@keyframes scan-load {
+			0% { clip-path: inset(0 0 100% 0); }
+			100% { clip-path: inset(0 0 0 0); }
+		}
 
         /* --- 新增：代码块样式 --- */
         .code-block {
