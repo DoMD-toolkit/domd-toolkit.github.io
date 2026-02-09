@@ -187,7 +187,7 @@
                     type: 'dir', 
                     children: {
                         'myron-li.txt': { type: 'file', content: ["NAME: Ming-yang Li", "ROLE: Researcher", '<img src="/images/mingyang-li.jpg" class="crt-image">']},
-                        'ruishi.txt': { type: 'file', content: ["NAME: Rui Shi", "ROLE: Archmage", '<img src="https://www.domd.today/images/Doraemon_character.png" class="crt-image">'], url:'//contents/ruishi.txt'},
+                        'ruishi.txt': { type: 'file', content: ["NAME: Rui Shi", "ROLE: Archmage", '<img src="/images/ruishi.jpg" class="crt-image">'], url:'/contents/ruishi.txt'},
 						},
                     } 
                 },
@@ -231,35 +231,77 @@
     // 延时函数
     const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
-    // 输出文本 (支持 HTML 和 打字机效果)
+/* --- 核心修复：带预加载的 printText --- */
+
+    // 辅助函数：在后台加载图片
+    function preloadImage(src) {
+        return new Promise((resolve, reject) => {
+            const img = new Image();
+            img.onload = () => resolve(img);
+            img.onerror = () => reject(new Error("Image load failed"));
+            img.src = src;
+        });
+    }
+
+    // 优化后的输出函数
     async function printText(lines, delay = 10) {
         for (let line of lines) {
             const div = document.createElement('div');
             div.className = 'output-line';
-            outputDiv.appendChild(div);
+            
+            // 检查是否包含图片标签
+            if (line.includes('<img')) {
+                // 1. 提取图片 URL
+                const srcMatch = line.match(/src="([^"]+)"/);
+                const imgSrc = srcMatch ? srcMatch[1] : null;
 
-			if (line.includes('<img')) {
-				div.innerHTML = line;
-				// 这里的 img 标签已经带有了 class="crt-image"，CSS 动画会自动触发
-				outputDiv.appendChild(div);
-				//scrollToBottom();
-				
-				// JS 只需要“暂停”一下，等待 CSS 的 2s 动画播完，
-				// 否则图片还没打完，光标就跳出来了，不真实。
-				await sleep(2600);  
+                if (imgSrc) {
+                    // 2. 显示加载提示 (增加真实感)
+                    const loadingDiv = document.createElement('div');
+                    loadingDiv.className = 'output-line';
+                    loadingDiv.style.color = 'var(--phosphor-dim)';
+                    loadingDiv.innerText = `[SYSTEM] Buffer receiving data...`;
+                    outputDiv.appendChild(loadingDiv);
+                    scrollToBottom();
+
+                    try {
+                        // 3. 关键：死等图片下载完成
+                        await preloadImage(imgSrc);
+                        
+                        // 4. 下载完了，删掉提示
+                        outputDiv.removeChild(loadingDiv);
+
+                        // 5. 插入真正的图片元素
+                        div.innerHTML = line; 
+                        outputDiv.appendChild(div);
+                        
+                        // 6. 此时图片就在 DOM 里，高度是完整的，立即滚动到底部
+                        scrollToBottom();
+
+                        // 7. 等待 CSS 动画播放完毕 (与 CSS animation: scan-load 2.5s 配合)
+                        //    这期间图片会展示那个帅气的扫描动画
+                        await sleep(2600); 
+
+                    } catch (e) {
+                        outputDiv.removeChild(loadingDiv);
+                        div.innerHTML = `<span class="error-msg">[ERROR] Image corrupted: ${imgSrc}</span>`;
+                        outputDiv.appendChild(div);
+                    }
+                }
             } else {
-                // 文本逐字打印
+                // 普通文本逻辑 (保持不变)
+                outputDiv.appendChild(div);
                 if (delay > 0) {
                     let txt = "";
-                    // 简单的 HTML 标签检测，防止拆开 HTML 标签
                     if (line.startsWith('<')) {
                          div.innerHTML = line;
                     } else {
                         for (let char of line) {
                             txt += char;
                             div.innerText = txt;
-                            scrollToBottom(); // 每打一个字都滚动
-                            await sleep(10);
+                            scrollToBottom();
+                            // 稍微加快一点打字速度，体验更好
+                            await sleep(5); 
                         }
                     }
                 } else {
