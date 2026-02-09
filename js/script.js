@@ -423,7 +423,7 @@ async function bootSequence() {
         await typeText(">> FETCHING DATA ...", 5);
         
         // 发起网络请求
-        const response = await fetch('http://localhost:8000/data.json'); 
+        const response = await fetch('/contents/data.json'); 
         
         // 检查文件是否存在
         if (!response.ok) {
