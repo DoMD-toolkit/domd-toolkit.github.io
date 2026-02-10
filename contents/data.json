@@ -4,7 +4,7 @@
     "news": [
       "[2026-02-10] System upgraded to JSON architecture.",
       "[2026-02-10] New version online: https://github.com/DoMD-toolkit/DoMD",
-	  "[2026-02-10] ChemFast 1.0.0 released: https://github.com/DoMD-toolkit/DoMD/releases/tag/v1.0.0",
+      "[2026-02-10] ChemFast 1.0.0 released: https://github.com/DoMD-toolkit/DoMD/releases/tag/v1.0.0",
       "NOTICE: Data is now fetched asynchronously."
     ]
   },
@@ -13,41 +13,72 @@
       "label": "ABOUT PROJECT",
       "type": "file",
       "content": "PROJECT: DoMD-Toolkit\nVERSION: 1.0.0\n\nThe Doraemon-ish toolkit for MD simulations.\n\n[[IMG: https://www.domd.today/images/DoMD-logo.png | LOGO ]]\n",
-	  "_content": "\n\n[[IMG: https://www.domd.today/images/DoMD-logo.png | LOGO ]]\n\nTESTING NEW IMAGE MODES:\n\n1. Default (Left, Max 300px):\n[[IMG: https://placehold.co/400x200/000000/33ff33/png?text=DEFAULT | Default Mode ]]\n\n2. Wide Mode (Left, Max 600px):\n[[IMG: https://placehold.co/700x250/000000/33ff33/png?text=WIDE+MODE | Wide Mode | wide ]]\n\n3. Center Mode (Center, Max 300px):\n[[IMG: https://placehold.co/400x200/000000/33ff33/png?text=CENTERED | Center Mode | center ]]\n\n4. Wide + Center Mode:\n[[IMG: https://placehold.co/700x250/000000/33ff33/png?text=WIDE+AND+CENTERED | Wide Center | wide | center ]]\n\n[[CODE: chem.py]]\ndef run(): pass\n[[ENDCODE]]\n\n Code and image Examples"
+      "_content": "\n\n[[IMG: https://www.domd.today/images/DoMD-logo.png | LOGO ]]\n\nTESTING NEW IMAGE MODES:\n\n1. Default (Left, Max 300px):\n[[IMG: https://placehold.co/400x200/000000/33ff33/png?text=DEFAULT | Default Mode ]]\n\n2. Wide Mode (Left, Max 600px):\n[[IMG: https://placehold.co/700x250/000000/33ff33/png?text=WIDE+MODE | Wide Mode | wide ]]\n\n3. Center Mode (Center, Max 300px):\n[[IMG: https://placehold.co/400x200/000000/33ff33/png?text=CENTERED | Center Mode | center ]]\n\n4. Wide + Center Mode:\n[[IMG: https://placehold.co/700x250/000000/33ff33/png?text=WIDE+AND+CENTERED | Wide Center | wide | center ]]\n\n[[CODE: chem.py]]\ndef run(): pass\n[[ENDCODE]]\n\n Code and image Examples"
     },
     {
       "label": "TEAM & CVs",
       "type": "menu",
       "items": [
         {
-          "label": "CORE MEMBERS",
+          "label": "Core Members",
           "type": "menu",
           "items": [
             {
               "label": "Ming-Yang Li (Lead)",
               "type": "file",
-              "content": "<span class='crt-blue'>NAME:</span> Ming-Yang Li\n<span class='crt-blue'>ROLE:</span> Lead\n[[IMG: https://www.domd.today/images/mingyang-li.jpg | PHOTO | small ]]\n<span class='crt-blue'>BIO:</span> Dynamics in coarse-grained molecular dynamics simulations.\n<span class='crt-blue'>Email:</span> limy1619 AT mails.jlu.edu.cn\n"
+              "content": "<span class='crt-blue'>NAME:</span> Ming-Yang Li\n<span class='crt-blue'>ROLE:</span> Lead\n[[IMG: https://www.domd.today/images/mingyang-li.jpg | PHOTO | small ]]\n<span class='crt-blue'>BIO:</span> Dynamics in coarse-grained molecular dynamics simulations.\n<span class='crt-blue'>Email:</span> limy1619 AT mails.jlu.edu.cn\n<span class='crt-blue'>Publications:</span>\n"
             },
-			{
+            {
               "label": "Rui Shi (Lead)",
               "type": "file",
-              "content": "<span class='crt-blue'>NAME:</span> Rui Shi\n<span class='crt-blue'>ROLE:</span> Archmage\n[[IMG: https://www.domd.today/images/ruishi.jpg | PHOTO | small ]]\n<span class='crt-blue'>BIO:</span> Fireball! Lightning Bolt! <span class='crt-purple'>Turn you into gay!</span>\n<span class='crt-blue'>Publications:</span>\n1. Ji-Yuan Xing, Sheng Li, Rui Shi*, Zhong-Yuan Lu*，Fine-Tuning Gradient Copolymers with Diverse and Controlled Microstructure and Mechanical Properties via Monomer Sequence Distribution: An In Silico Study，Macromolecules, 2024, 57(1), 385–395.\n2. Mechanism of periodic field driven self-assembly process, The Journal of Chemical Physics, Duo Xu; Rui Shi*; Zhao-Yan Sun; Zhong-Yuan Lu*\n"
-			}
+              "content": "<span class='crt-blue'>NAME:</span> Rui Shi\n<span class='crt-blue'>ROLE:</span> Archmage\n[[IMG: https://www.domd.today/images/ruishi.jpg | PHOTO | small ]]\n<span class='crt-blue'>BIO:</span> Fireball! Lightning Bolt! <span class='crt-purple'>Turn you into gay!</span>\n<span class='crt-blue'>Email:</span> \n<span class='crt-blue'>Publications:</span>\n1. 1. Ji-Yuan Xing, Sheng Li, Rui Shi*, Zhong-Yuan Lu*，Fine-Tuning Gradient Copolymers with Diverse and Controlled Microstructure and Mechanical Properties via Monomer Sequence Distribution: An In Silico Study，Macromolecules, 2024, 57(1), 385–395., <span style='font-style: italic;'>ma</span>, <span style='font-weight: bold;'>2025</span>, 1,2.\n2. 2. Mechanism of periodic field driven self-assembly process, The Journal of Chemical Physics, Duo Xu; Rui Shi*; Zhao-Yan Sun; Zhong-Yuan Lu*, <span style='font-style: italic;'>ma</span>, <span style='font-weight: bold;'>2025</span>, 3,4."
+            }
           ]
         }
       ]
     },
-	{
-		"label": "PUBLICATIONS",
-		"type": "menu",
-		"items": [
-		{
-			"label": "2024-2025",
-			"type": "file",
-			"content": "1. Ji-Yuan Xing, Sheng Li, Rui Shi*, Zhong-Yuan Lu*，Fine-Tuning Gradient Copolymers with Diverse and Controlled Microstructure and Mechanical Properties via Monomer Sequence Distribution: An In Silico Study，<span style='font-style: italic;'>Macromolecules</span>, <span style='font-weight: bold;'>2024</span>, 57(1), 385–395."
-		}
-		]
-	},
+    {
+      "label": "PUBLICATIONS",
+      "type": "menu",
+      "items": [
+        {
+          "label": "2024-2025",
+          "type": "file",
+          "content": "1. 1. Ji-Yuan Xing, Sheng Li, Rui Shi*, Zhong-Yuan Lu*，Fine-Tuning Gradient Copolymers with Diverse and Controlled Microstructure and Mechanical Properties via Monomer Sequence Distribution: An In Silico Study，<span style='font-style: italic;'>Macromolecules</span>, <span style='font-weight: bold;'>2024</span>, 57(1), 385–395., <span style='font-style: italic;'>ma</span>, <span style='font-weight: bold;'>2025</span>, 1,2.\n[[IMG: /images/ruishi.jpg | TOC | small ]]\n2. 2. fdafdsa, <span style='font-style: italic;'>ff</span>, <span style='font-weight: bold;'>2205</span>, 3,4.\n[[IMG: /image/ruishi.jpg | TOC | small ]]",
+          "mode": "fast"
+        }
+      ]
+    },
+    {
+      "label": "HELP",
+      "type": "menu",
+      "items": [
+        {
+          "label": "INSTALLATION",
+          "type": "file",
+          "content": "[[IMG: https://www.domd.today/images/DoMD-logo.png | LOGO ]]\n\nTESTING NEW IMAGE MODES:\n\n1. Default (Left, Max 300px):\n[[IMG: https://placehold.co/400x200/000000/33ff33/png?text=DEFAULT | Default Mode ]]\n\n2. Wide Mode (Left, Max 600px):\n[[IMG: https://placehold.co/700x250/000000/33ff33/png?text=WIDE+MODE | Wide Mode | wide ]]\n\n3. Center Mode (Center, Max 300px):\n[[IMG: https://placehold.co/400x200/000000/33ff33/png?text=CENTERED | Center Mode | center ]]\n\n4. Wide + Center Mode:\n[[IMG: https://placehold.co/700x250/000000/33ff33/png?text=WIDE+AND+CENTERED | Wide Center | wide | center ]]\n\n[[CODE: chem.py]]\ndef run(): pass\n[[ENDCODE]]\n\n Code and image Examples",
+          "mode": "fast"
+        },
+        {
+          "label": "TOTURIALs",
+          "type": "menu",
+          "items": [
+            {
+              "label": "Example1",
+              "type": "file",
+              "mode": "fast",
+              "content": "[[IMG: https://www.domd.today/images/DoMD-logo.png | LOGO ]]\n\nTESTING NEW IMAGE MODES:\n\n1. Default (Left, Max 300px):\n[[IMG: https://placehold.co/400x200/000000/33ff33/png?text=DEFAULT | Default Mode ]]\n\n2. Wide Mode (Left, Max 600px):\n[[IMG: https://placehold.co/700x250/000000/33ff33/png?text=WIDE+MODE | Wide Mode | wide ]]\n\n3. Center Mode (Center, Max 300px):\n[[IMG: https://placehold.co/400x200/000000/33ff33/png?text=CENTERED | Center Mode | center ]]\n\n4. Wide + Center Mode:\n[[IMG: https://placehold.co/700x250/000000/33ff33/png?text=WIDE+AND+CENTERED | Wide Center | wide | center ]]\n\n[[CODE: chem.py]]\ndef run(): pass\n[[ENDCODE]]\n\n Code and image Examples"
+            },
+            {
+              "label": "New Example",
+              "type": "file",
+              "mode": "fast",
+              "content": "[[IMG: https://www.domd.today/images/DoMD-logo.png | LOGO ]]\n\nTESTING NEW IMAGE MODES:\n\n1. Default (Left, Max 300px):\n[[IMG: https://placehold.co/400x200/000000/33ff33/png?text=DEFAULT | Default Mode ]]\n\n2. Wide Mode (Left, Max 600px):\n[[IMG: https://placehold.co/700x250/000000/33ff33/png?text=WIDE+MODE | Wide Mode | wide ]]\n\n3. Center Mode (Center, Max 300px):\n[[IMG: https://placehold.co/400x200/000000/33ff33/png?text=CENTERED | Center Mode | center ]]\n\n4. Wide + Center Mode:\n[[IMG: https://placehold.co/700x250/000000/33ff33/png?text=WIDE+AND+CENTERED | Wide Center | wide | center ]]\n\n[[CODE: chem.py]]\ndef run(): pass\n[[ENDCODE]]\n\n Code and image Examples"
+            }
+          ]
+        }
+      ]
+    },
     {
       "label": "CLEAR SCREEN",
       "type": "action",
