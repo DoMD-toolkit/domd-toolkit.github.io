@@ -20,6 +20,44 @@ body {
     color: var(--phosphor-main);
 }
 
+
+
+/* =========================================
+   [简约版] 系统超频特效 - 仅保留红色呼吸灯
+   ========================================= */
+
+/* 1. 移除红色遮罩，恢复正常的屏幕状态 */
+body.system-overclock .screen-overlay {
+    background: radial-gradient(circle, rgba(51, 255, 51, 0) 60%, rgba(0, 0, 0, 0.2) 100%);
+    animation: flicker 3s infinite alternate; /* 保持正常的缓慢呼吸 */
+}
+
+/* 2. 扫线保持默认颜色，但速度稍微加快一点点，提示系统在忙碌 */
+body.system-overclock .scanlines {
+    animation: scrollScanlines 4s linear infinite; 
+    background: linear-gradient(to bottom, rgba(255, 255, 255, 0) 50%, rgba(0, 0, 0, 0.1) 50%);
+}
+
+/* 3. 【核心修改】将绿色的外圈发光改为红色呼吸效果 */
+body.system-overclock .crt-container {
+    /* 移除之前的晃动动画，改为平稳的红色呼吸 */
+    animation: pulseRedBreath 1.5s infinite alternate;
+    border-color: rgba(255, 50, 50, 0.8);
+    transition: border-color 1s ease;
+}
+
+/* 红色呼吸灯动画定义 */
+@keyframes pulseRedBreath {
+    from { 
+        box-shadow: 0 0 30px rgba(255, 50, 50, 0.2); 
+    }
+    to { 
+        /* 增强红色荧光外圈，模拟硬件满载发热感 */
+        box-shadow: 0 0 60px rgba(255, 50, 50, 0.5), 
+                    inset 0 0 15px rgba(255, 50, 50, 0.1); 
+    }
+}
+
 .crt-container {
     width: 95vw;
     height: 90vh;
