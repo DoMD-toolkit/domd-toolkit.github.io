@@ -20,7 +20,7 @@
       "type": "menu",
       "items": [
         {
-          "label": "Core Members",
+          "label": "CORE MEMBERS",
           "type": "menu",
           "items": [
             {
@@ -38,7 +38,7 @@
       ]
     },
 	{
-		"label": "Publications",
+		"label": "PUBLICATIONS",
 		"type": "menu",
 		"items": [
 		{
