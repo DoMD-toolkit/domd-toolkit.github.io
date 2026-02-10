@@ -328,8 +328,8 @@ async function fastRenderContent(contentString) {
     globalCursor.style.display = 'inline-block';
 
     // 提示语也配合一下氛围
-    await typeDebug(">> WARNING: HIGH-SPEED DATA STREAM INITIATED...", 2);
-    await sleep(200);
+    await typeDebug(">> WARNING: HIGH-SPEED DATA STREAM INITIATED...", 8);
+    await sleep(500);
 
     const lines = contentString.split('\n');
     let inCodeBlock = false, codeBuffer = [], codeFilename = "script.py";
