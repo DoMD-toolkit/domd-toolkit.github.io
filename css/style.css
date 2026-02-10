@@ -1,11 +1,14 @@
+/* the pitboy style */
 
 @import url('https://fonts.loli.net/css2?family=VT323&display=swap');
 
 :root {
-    --terminal-bg: #0a0a0a;
-    --phosphor-main: #33ff33; /* 经典绿 */
-    --phosphor-dim: #1a801a;  /* 暗绿，用于深阴影 */
-    --phosphor-bright: #ccffcc; /* 亮白绿，用于高光 */
+    --terminal-bg: #121212; /* 稍微带点底色的深灰色，模拟荧光粉涂层 */
+    /* Pip-Boy 核心琥珀色：#ffb642 或 经典荧光绿：#18fa7e */
+    --phosphor-main: #18fa7e; 
+    --phosphor-dim: rgba(24, 250, 126, 0.3);
+    --phosphor-bright: #ccffcc;
+    --crt-curve: radial-gradient(circle, rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 100%);
 }
 
 body {
@@ -22,19 +25,20 @@ body {
 
 
 
+/* --- [修改] CRT 容器：增加弧形显示器的感觉 --- */
 .crt-container {
     width: 95vw;
     height: 90vh;
     background-color: var(--terminal-bg);
-    border-radius: 20px;
+    border-radius: 40px; /* 边缘更圆润 */
     position: relative;
-    box-shadow: 0 0 50px rgba(51, 255, 51, 0.15);
-    border: 1px solid #333;
+    /* 增强外阴影，模拟屏幕在塑料外壳里的发光感 */
+    box-shadow: 
+        0 0 40px rgba(0,0,0,0.9),
+        inset 0 0 100px rgba(24, 250, 126, 0.05),
+        0 0 20px var(--phosphor-dim);
+    border: 15px solid #2a2a2a; /* 模拟厚重的 Pip-Boy 塑料外壳 */
     overflow: hidden;
-    transform-origin: center center;
-	transition: 
-        border-color 1.2s ease-in-out, 
-        box-shadow 1.2s ease-in-out;
 }
 
 
@@ -100,39 +104,44 @@ body.shutdown-active .crt-container {
 #terminal-output { flex-grow: 1; }
 
 
+/* --- [重置] 扫描线：Pip-Boy 风格更粗、更具物理感 --- */
 .scanlines {
     position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    /* 核心：确保它在最顶层 */
-    z-index: 10; 
-    /* 核心：允许鼠标穿透点击下面的菜单 */
-    pointer-events: none; 
-    
+    top: 0; left: 0; width: 100%; height: 100%;
+    z-index: 10;
+    pointer-events: none;
+    /* 模拟显像管条纹：增加阴影对比，让线条更明显 */
     background: linear-gradient(
         to bottom,
-        rgba(255, 255, 255, 0) 50%,
-        rgba(0, 0, 0, 0.1) 50% /* 线条浓度从 0.3 降到 0.05，更温柔 */
+        rgba(18, 16, 16, 0) 50%,
+        rgba(0, 0, 0, 0.15) 50%
     );
-    background-size: 100% 6px; /* 线条变稀疏一点，减少压力 */
-    animation: scrollScanlines 10s linear infinite;
+    background-size: 100% 4px; /* 线条间距 */
+    animation: scrollScanlines 8s linear infinite;
 }
 
-/* --- 2. 屏幕遮罩层：负责轻微频闪 --- */
+/* --- [重置] 屏幕遮罩层：增加模拟信号的“灰度”与“暗角” --- */
 .screen-overlay {
     position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
+    top: 0; left: 0; width: 100%; height: 100%;
     z-index: 11;
     pointer-events: none;
-    background: radial-gradient(circle, rgba(51, 255, 51, 0) 60%, rgba(0, 0, 0, 0.2) 100%);
-    
-    /* 调优：闪烁频率变慢（0.15s -> 3s），变为缓慢呼吸感 */
-    animation: flicker 3s infinite alternate; 
+    /* 关键：增加边缘暗角（Vignette）模拟老式凸面显示器 */
+    background: radial-gradient(
+        circle, 
+        rgba(24, 250, 126, 0.05) 0%, 
+        rgba(0, 0, 0, 0.1) 60%, 
+        rgba(0, 0, 0, 0.4) 100%
+    );
+    /* 模拟电子束的不稳定性闪烁 */
+    animation: pipBoyFlicker 0.1s infinite;
+}
+
+/* --- [新增] 专门针对 Pip-Boy 的高频微闪 --- */
+@keyframes pipBoyFlicker {
+    0% { opacity: 0.97; }
+    50% { opacity: 1.0; }
+    100% { opacity: 0.98; }
 }
 
 /* --- 3. 内容层：现在它只负责显示和滚动 --- */
@@ -180,9 +189,9 @@ body.shutdown-active .crt-container {
     
     /* 硬件边框：纯黑，带一点点内阴影模拟凹槽 */
     border: 0px solid #000; 
-    box-shadow: 
-        inset 0 0 5px rgba(0,0,0,0.3), /* 内部轻微阴影 */
-        0 0 5px rgba(51, 255, 51, 0.2); /* 常态下几乎看不见的外光 */
+	box-shadow: 
+			0 0 15px var(--phosphor-main),
+			inset 0 0 5px rgba(0,0,0,0.5);
     
     text-transform: uppercase;
     letter-spacing: 3px;
@@ -310,22 +319,13 @@ body.shutdown-active .crt-container {
     transition: clip-path 3s linear;
     
     /* --- [核心修改区] 温和的彩电滤镜 --- */
-    filter: 
-        /* 1. 极轻微的暖色调，避免冷冰冰的数码感，但绝不变黄 */
-        sepia(5%)          
-        
-        /* 2. 提高对比度，模拟 CRT 荧光屏的发光特性，画面更立体 */
-        contrast(1.15)     
-        
-        /* 3. 稍微降低亮度，防止高光刺眼，配合背景的暗环境 */
-        brightness(0.95)   
-        
-        /* 4. 稍微提高饱和度，让色彩在暗环境下也能跳出来 */
-        saturate(1.1)      
-        
-        /* 5. 关键点：极轻微的模糊。模拟模拟信号不锐利的边缘 */
-        /* 这能有效消除现代图片过于清晰的数码味 */
-        blur(0.6px);       
+	filter: 
+        grayscale(0.2)      /* 增加一点灰度感 */
+        sepia(10%)          /* 模拟老化 */
+        contrast(1.2)       /* 强对比 */
+        brightness(0.9) 
+        saturate(1.3)       /* 颜色要浓郁 */
+        blur(0.5px);
 
     /* 稍微一点点透明，让背景的黑色透上来一点，增加融合感 */
     opacity: 0.95;
@@ -353,7 +353,7 @@ body.shutdown-active .crt-container {
 }
 
 
-.code-panel { border: 2px solid var(--phosphor-main); margin: 15px 0; background: rgba(0, 20, 0, 0.9); position: relative; max-width: 90%; box-shadow: 5px 5px 0px rgba(51, 255, 51, 0.2); }
+.code-panel { border: 2px solid var(--phosphor-main); border-color: var(--phosphor-dim); margin: 15px 0; background: rgba(5, 15, 5, 0.95); position: relative; max-width: 90%; box-shadow: 5px 5px 0px rgba(51, 255, 51, 0.2); }
 .code-header { background: var(--phosphor-main); color: #000; padding: 2px 8px; font-weight: bold; font-size: 0.8em; text-transform: uppercase; border-bottom: 1px solid var(--phosphor-main); display: flex; justify-content: space-between; }
 .code-body { padding: 15px; font-family: 'Courier New', Courier, monospace; font-size: 0.95em; color: var(--phosphor-bright); white-space: pre; overflow-x: auto; line-height: 1.5; }
 .token-keyword { color: #ff55ff; text-shadow: 0 0 5px #ff55ff; font-weight: bold; }
@@ -362,7 +362,7 @@ body.shutdown-active .crt-container {
 .token-number  { color: #ffaa55; }
 .menu-container { margin: 20px 0; border: 1px dashed var(--phosphor-dim); padding: 10px; }
 .menu-item { padding: 5px 10px; cursor: pointer; transition: all 0.1s; border-left: 3px solid transparent; }
-.menu-item.active { background-color: var(--phosphor-main); color: #000; font-weight: bold; border-left: 3px solid #000; box-shadow: 0 0 15px var(--phosphor-main); text-shadow: none;}
+.menu-item.active { background-color: var(--phosphor-main); color: #0d0d0d; font-weight: bold; border-left: 3px solid #000; box-shadow: 0 0 20px var(--phosphor-main); text-shadow: none;}
 .input-line { display: flex; align-items: center; margin-top: 10px; }
 .prompt { color: var(--phosphor-main); margin-right: 10px; font-weight: bold; }
 @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
