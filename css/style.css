@@ -22,42 +22,6 @@ body {
 
 
 
-/* =========================================
-   [简约版] 系统超频特效 - 仅保留红色呼吸灯
-   ========================================= */
-
-/* 1. 移除红色遮罩，恢复正常的屏幕状态 */
-body.system-overclock .screen-overlay {
-    background: radial-gradient(circle, rgba(51, 255, 51, 0) 60%, rgba(0, 0, 0, 0.2) 100%);
-    animation: flicker 3s infinite alternate; /* 保持正常的缓慢呼吸 */
-}
-
-/* 2. 扫线保持默认颜色，但速度稍微加快一点点，提示系统在忙碌 */
-body.system-overclock .scanlines {
-    animation: scrollScanlines 4s linear infinite; 
-    background: linear-gradient(to bottom, rgba(255, 255, 255, 0) 50%, rgba(0, 0, 0, 0.1) 50%);
-}
-
-/* 3. 【核心修改】将绿色的外圈发光改为红色呼吸效果 */
-body.system-overclock .crt-container {
-    /* 移除之前的晃动动画，改为平稳的红色呼吸 */
-    animation: pulseRedBreath 1.5s infinite alternate;
-    border-color: rgba(255, 50, 50, 0.8);
-    transition: border-color 1s ease;
-}
-
-/* 红色呼吸灯动画定义 */
-@keyframes pulseRedBreath {
-    from { 
-        box-shadow: 0 0 30px rgba(255, 50, 50, 0.2); 
-    }
-    to { 
-        /* 增强红色荧光外圈，模拟硬件满载发热感 */
-        box-shadow: 0 0 60px rgba(255, 50, 50, 0.5), 
-                    inset 0 0 15px rgba(255, 50, 50, 0.1); 
-    }
-}
-
 .crt-container {
     width: 95vw;
     height: 90vh;
@@ -68,7 +32,50 @@ body.system-overclock .crt-container {
     border: 1px solid #333;
     overflow: hidden;
     transform-origin: center center;
+	transition: 
+        border-color 1.2s ease-in-out, 
+        box-shadow 1.2s ease-in-out;
 }
+
+
+/* --- 超频状态：定义进场和电流效果 --- */
+body.system-overclock .crt-container {
+    border-color: rgba(255, 100, 100, 0.9);
+    
+    /* 【关键】进场过渡：进入超频时，只需 0.3秒 快速变红 */
+    transition: 
+        border-color 0.3s ease-out, 
+        box-shadow 0.3s ease-out;
+
+    /* 这种多层阴影能产生你想要的“霓虹荧光”质感 */
+    box-shadow: 
+        0 0 10px rgba(255, 255, 255, 0.6),
+        0 0 25px rgba(255, 50, 50, 0.8),
+        0 0 45px rgba(255, 0, 0, 0.5),
+        inset 0 0 15px rgba(255, 50, 50, 0.3);
+
+    /* 这里的动画不再是大幅度呼吸，而是高频微颤（霓虹灯电流感） */
+    animation: neonPulse 0.1s infinite;
+}
+
+/* 霓虹灯高频微颤：模拟电压不稳，非常有硬核感 */
+@keyframes neonPulse {
+    0%, 100% { 
+        filter: brightness(1); 
+        transform: scale(1);
+    }
+    50% { 
+        filter: brightness(1.1); /* 极轻微的闪烁 */
+        /*transform: scale(1.002);*/ /* 极轻微的膨胀震动 */
+    }
+}
+
+/* 扫线和遮罩层配合提速 */
+body.system-overclock .scanlines {
+    animation: scrollScanlines 2s linear infinite;
+    opacity: 0.15;
+}
+
 
 body.shutdown-active .crt-container {
     animation: turn-off 0.7s cubic-bezier(0.23, 1, 0.32, 1) forwards;
