@@ -31,24 +31,27 @@ function scrollToBottom() {
 
 // --- 基础组件 ---
 // [修改版] 支持传入 className
-async function typeText(text, delay = 5, className = '') {
+async function typeText(text, delay = 8, className = '') {
     if (!text) return;
-    
     const lineDiv = document.createElement('div');
-    // 如果传入了 className，就拼接到 output-line 后面
     lineDiv.className = `output-line ${className}`;
-    
     outputDiv.appendChild(lineDiv);
+
+    // 优化点：采用步进式打印，每跳处理 2 个字符
+    let i = 0;
+    const step = 2; 
     
-    for (let char of text) {
-        lineDiv.textContent += char;
+    while (i < text.length) {
+        const chunk = text.substring(i, i + step);
+        lineDiv.textContent += chunk;
+        i += step;
+        
         scrollToBottom();
         
-        let currentDelay = delay;
-        if ([',', '.', ':', '!', '?'].includes(char)) currentDelay = delay * 4;
-        await sleep(currentDelay);
+        // 只有遇到结尾类标点才微顿，其余时间全速前进
+        const isEnd = /[.!?。！？]/.test(chunk);
+        await sleep(isEnd ? delay * 3 : delay);
     }
-    await sleep(30);
 }
 
 // --- [新增] 便捷封装函数 ---
@@ -64,65 +67,49 @@ async function typeDebug(text) {
 }
 
 
-async function typeTextHTML(htmlContent, delay = 5) {
-    // 1. 创建输出行
+async function typeTextHTML(htmlContent, delay = 8) {
     const lineDiv = document.createElement('div');
     lineDiv.className = 'output-line';
     outputDiv.appendChild(lineDiv);
 
-    // 2. 创建临时解析容器
     const tempDiv = document.createElement('div');
     tempDiv.innerHTML = htmlContent;
 
-    // 3. 递归搬运工
     async function transferNodes(source, target) {
-        // 遍历源节点的所有子节点
-        // 使用 Array.from 生成快照，防止 DOM 变动导致的索引问题
         const nodes = Array.from(source.childNodes);
         
         for (const node of nodes) {
-            
-            // --- 情况 A: 纯文本节点 ---
             if (node.nodeType === Node.TEXT_NODE) {
-                // 【核心修复】
-                // 不能直接操作 target.textContent，否则会覆盖掉之前的标签！
-                // 必须创建一个新的 TextNode 挂上去
                 const textNode = document.createTextNode('');
                 target.appendChild(textNode);
 
-                for (const char of node.textContent) {
-                    textNode.textContent += char; // 只更新这个独立的文本节点
-                    scrollToBottom();
+                const text = node.textContent;
+                let i = 0;
+                // 每次搬运 3 个字符，平衡流畅度与速度
+                const step = 3; 
+
+                while (i < text.length) {
+                    textNode.textContent += text.substring(i, i + step);
+                    i += step;
                     
-                    // 标点停顿
-                    let currentDelay = ([',', '.', ':', '!', '?'].includes(char)) ? delay * 5 : delay;
-                    await sleep(currentDelay);
+                    scrollToBottom();
+                    await sleep(delay);
                 }
             } 
-            
-            // --- 情况 B: 元素节点 (如 <span class="red">) ---
             else if (node.nodeType === Node.ELEMENT_NODE) {
                 const newElement = document.createElement(node.tagName);
-                
-                // 复制所有属性 (class, style...)
                 Array.from(node.attributes).forEach(attr => {
                     newElement.setAttribute(attr.name, attr.value);
                 });
-                
-                // 先把带样式的空壳子挂上去
                 target.appendChild(newElement);
-                
-                // 递归：去搬运这个标签里面的内容
+                // 递归内部也要保持高速
                 await transferNodes(node, newElement);
             }
         }
     }
 
-    // 4. 开始搬运
     await transferNodes(tempDiv, lineDiv);
-    
-    // 5. 结尾行停顿
-    await sleep(30);
+    await sleep(20); // 结尾稍作收放
 }
 
 
@@ -276,6 +263,132 @@ async function renderContent(contentString) {
     waitForEnter();
 }
 
+
+// [零件A] 极速 HTML 打字机：分块打印，每帧输出 8 个字符
+async function fastTypeTextHTML(htmlContent) {
+    const lineDiv = document.createElement('div');
+    lineDiv.className = 'output-line';
+    outputDiv.appendChild(lineDiv);
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = htmlContent;
+
+    async function transfer(source, target) {
+        for (const node of Array.from(source.childNodes)) {
+            if (node.nodeType === Node.TEXT_NODE) {
+                const textNode = document.createTextNode('');
+                target.appendChild(textNode);
+                const text = node.textContent;
+                let i = 0;
+                while (i < text.length) {
+                    // 每次取 8 个字，大幅减少 DOM 更新次数
+                    textNode.textContent += text.substring(i, i + 8);
+                    i += 8;
+                    scrollToBottom();
+                    await new Promise(r => setTimeout(r, 0)); 
+                }
+            } else if (node.nodeType === Node.ELEMENT_NODE) {
+                const newEl = document.createElement(node.tagName);
+                Array.from(node.attributes).forEach(a => newEl.setAttribute(a.name, a.value));
+                target.appendChild(newEl);
+                await transfer(node, newEl);
+            }
+        }
+    }
+    await transfer(tempDiv, lineDiv);
+}
+
+// [零件B] 极速图片渲染：缩短动画到 0.6s，等待仅 200ms
+async function fastRenderImage(src, altText = "IMAGE", extraClasses = "") {
+    await typeText(`>> FAST-LOAD: ${altText}`, 2); 
+    try {
+        await preloadImage(src);
+        const container = document.createElement('div');
+        container.className = `img-container ${extraClasses}`;
+        const img = document.createElement('img');
+        img.src = src;
+        img.className = 'scan-effect';
+        // 强制覆盖 CSS 的 3s 动画，改为极速扫描
+        img.style.transition = "clip-path 0.6s cubic-bezier(0.2, 0.8, 0.2, 1)";
+        container.appendChild(img);
+        outputDiv.appendChild(container);
+        scrollToBottom();
+        void img.offsetWidth; 
+        img.classList.add('loaded');
+        await sleep(200); // 极短停顿
+    } catch (e) { await typeError(`[LOAD FAIL]`); }
+}
+
+// [修改版] 爆发模式渲染器 (带视觉特效)
+async function fastRenderContent(contentString) {
+    // 1. 【开启特效】激活超频状态
+    document.body.classList.add('system-overclock');
+
+    state.mode = 'RenderContent';
+    interactiveDiv.innerHTML = '';
+    globalCursor.style.display = 'inline-block';
+
+    // 提示语也配合一下氛围
+    await typeDebug(">> WARNING: HIGH-SPEED DATA STREAM INITIATED...", 2);
+    await sleep(200);
+
+    const lines = contentString.split('\n');
+    let inCodeBlock = false, codeBuffer = [], codeFilename = "script.py";
+
+    // 使用 try-finally 确保特效一定会被关闭
+    try {
+        for (let line of lines) {
+            const trimmed = line.trim();
+
+            if (trimmed.startsWith('[[CODE:')) { 
+                inCodeBlock = true; 
+                codeFilename = trimmed.replace(/\[\[CODE:|\]\]/g, '').trim(); 
+                codeBuffer = []; 
+                continue; 
+            }
+            if (trimmed === '[[ENDCODE]]') { 
+                inCodeBlock = false; 
+                await renderCodeBox(codeFilename, codeBuffer); 
+                continue; 
+            }
+            if (inCodeBlock) { codeBuffer.push(line); continue; }
+
+            if (trimmed.startsWith('[[IMG:')) {
+                const rawContent = trimmed.replace(/\[\[IMG:|\]\]/g, '');
+                const parts = rawContent.split('|').map(p => p.trim());
+                const src = parts[0];
+                const alt = parts[1] || "IMAGE";
+                const extraClasses = parts.slice(2).join(' ');
+
+                // 调用高速版图片渲染
+                await fastRenderImage(src, alt, extraClasses); 
+                continue;
+            }
+
+            if (trimmed.startsWith('[[PAUSE:')) { 
+                const pTime = parseInt(trimmed.replace(/\D/g, ''));
+                await sleep(pTime / 4); // 爆发模式下暂停时间大幅缩短
+                continue; 
+            }
+
+            if (line.length > 0) {
+                // 调用高速版 HTML 打字机
+                await fastTypeTextHTML(line);
+            }
+        }
+    } finally {
+        // 2. 【关闭特效】渲染结束（无论成功失败），移除超频状态
+        document.body.classList.remove('system-overclock');
+    }
+
+    await sleep(200);
+    await typeDebug("\n>> [STREAM COMPLETE. SYSTEMS STABILIZED.]", 5);
+    await typeText("Press [ENTER] to return...", 5);
+    waitForEnter();
+}
+
+
+
+
 function renderMenuFromData(title, menuItems, animate = false) {
     state.mode = 'MENU';
     state.menuIndex = 0;
@@ -341,11 +454,17 @@ async function handleSelection(option) {
     } 
     else if (option.type === 'file') {
         // 进入文件：把"当前"存入 lastMenuContext
+		console.log(option.mode);
         state.lastMenuContext = {
             title: currentTitle,
             items: currentItems
         };
-        await renderContent(option.content);
+        if (option.mode === 'fast') {
+			console.log(option.content);
+            await fastRenderContent(option.content);
+        } else {
+            await renderContent(option.content);
+        }
     } 
     else if (option.type === 'back') {
         // 返回上一级：从栈中恢复
