@@ -422,7 +422,7 @@ function renderMenuFromData(title, menuItems, animate = false) {
         menuContainer.appendChild(item);
     });
 
-    menuContainer.insertAdjacentHTML('beforeend', '<div style="margin-top:10px;font-size:0.8em;opacity:0.7">USE ARROW KEYS OR MOUSE</div>');
+    menuContainer.insertAdjacentHTML('beforeend', '<div style="margin-top:10px;font-size:0.8em;opacity:0.7">USE ARROW KEYS, NUM KEYS OR MOUSE</div>');
     interactiveDiv.appendChild(menuContainer);
     updateMenuVisuals();
     scrollToBottom();
