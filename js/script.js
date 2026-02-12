@@ -454,13 +454,13 @@ async function handleSelection(option) {
     } 
     else if (option.type === 'file') {
         // 进入文件：把"当前"存入 lastMenuContext
-		console.log(option.mode);
+		//console.log(option.mode);
         state.lastMenuContext = {
             title: currentTitle,
             items: currentItems
         };
         if (option.mode === 'fast') {
-			console.log(option.content);
+			//console.log(option.content);
             await fastRenderContent(option.content);
         } else {
             await renderContent(option.content);
