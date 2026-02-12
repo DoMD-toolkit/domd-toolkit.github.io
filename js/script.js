@@ -559,7 +559,7 @@ async function bootSequence() {
         fileSystem = await response.json();
         
         await sleep(300);
-        await typeText(">> DATA INTEGRITY CHECK: PASS", 5);
+        await typeTextHTML(">> DATA INTEGRITY CHECK: <span class='crt-blue'>PASS</span>", 5);
 
     } catch (error) {
         // 如果加载失败（比如 JSON 格式写错了，或者文件没找到）
