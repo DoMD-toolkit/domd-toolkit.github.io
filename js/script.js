@@ -523,6 +523,12 @@ async function performShutdown() {
 
 document.addEventListener('keydown', (e) => {
     if (state.mode !== 'MENU') return;
+	const keyNum = parseInt(e.key); // 尝试将按键转为数字
+    if (keyNum > 0 && keyNum <= state.currentMenuOptions.length) {
+        e.preventDefault();
+        handleSelection(state.currentMenuOptions[keyNum - 1]);
+        return; // 直接触发并跳出，不执行后面的上下键逻辑
+    }
     if (e.key === 'ArrowUp') { e.preventDefault(); state.menuIndex = (state.menuIndex > 0) ? state.menuIndex - 1 : state.currentMenuOptions.length - 1; updateMenuVisuals(); }
     else if (e.key === 'ArrowDown') { e.preventDefault(); state.menuIndex = (state.menuIndex < state.currentMenuOptions.length - 1) ? state.menuIndex + 1 : 0; updateMenuVisuals(); }
     else if (e.key === 'Enter') { e.preventDefault(); document.getElementById(`menu-${state.menuIndex}`).click(); }
