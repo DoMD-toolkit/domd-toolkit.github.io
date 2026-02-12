@@ -485,20 +485,20 @@ async function handleSelection(option) {
 function waitForEnter() {
     state.mode = 'WAIT';
     const handler = (e) => {
-        if(e.key === 'Enter') {
+        // 判断：如果是点击事件，或者是按下了 Enter 键
+        if (e.type === 'click' || e.key === 'Enter') {
             document.removeEventListener('keydown', handler);
+            document.removeEventListener('click', handler); // 记得也要移除点击监听
             
-            // 此时页面是空的，querySelector 会报错
-            // 所以我们直接从 lastMenuContext 读取数据
             if (state.lastMenuContext) {
                 renderMenuFromData(state.lastMenuContext.title, state.lastMenuContext.items);
             } else {
-                // 如果没有历史记录，兜底回主菜单
                 renderMenuFromData("MAIN MENU // DOMD-TOOLKIT", fileSystem.root);
             }
         }
     };
     document.addEventListener('keydown', handler);
+    document.addEventListener('click', handler); // 新增：监听全局点击
 }
 
 // --- 功能函数 ---
