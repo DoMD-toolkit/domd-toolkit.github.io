@@ -318,6 +318,55 @@ async function fastRenderImage(src, altText = "IMAGE", extraClasses = "") {
     } catch (e) { await typeError(`[LOAD FAIL]`); }
 }
 
+async function fastRenderCodeBox(filename, codeLines) {
+    const panel = document.createElement('div');
+    panel.className = 'code-panel';
+    
+    const header = document.createElement('div');
+    header.className = 'code-header';
+    // 配合 Pip-Boy 风格，可以在这里加个 [LOADING...] 状态
+    header.innerHTML = `<span>SRC: ${filename}</span><span>BURST_READ</span>`;
+    panel.appendChild(header);
+    
+    const body = document.createElement('div');
+    body.className = 'code-body';
+    panel.appendChild(body);
+    outputDiv.appendChild(panel);
+    scrollToBottom();
+
+    // 每一行进行极速渲染
+    for (let line of codeLines) {
+        const lineDiv = document.createElement('div');
+        body.appendChild(lineDiv);
+        
+        const tokens = parsePythonLine(line);
+        
+        // --- 核心优化：不再逐字打印 ---
+        for (let token of tokens) {
+            const span = document.createElement('span');
+            if (token.type !== 'normal') span.className = `token-${token.type}`;
+            
+            // 直接一次性填入整个 Token 的文字
+            span.textContent = token.text;
+            lineDiv.appendChild(span);
+        }
+        
+        lineDiv.appendChild(document.createTextNode('\n'));
+        
+        // 每行处理完后的微小停顿，给浏览器喘息机会，同时产生“刷刷刷”的视觉节奏
+        // 如果想更快，可以每 5 行才 await 一次
+        if (codeLines.indexOf(line) % 2 === 0) {
+            scrollToBottom();
+            await new Promise(r => setTimeout(r, 0)); 
+        }
+    }
+    
+    // 渲染完成，把 header 状态改回来
+    header.innerHTML = `<span>SRC: ${filename}</span><span>PYTHON</span>`;
+    await sleep(50); 
+}
+
+
 // [修改版] 爆发模式渲染器 (带视觉特效)
 async function fastRenderContent(contentString) {
     // 1. 【开启特效】激活超频状态
@@ -347,7 +396,7 @@ async function fastRenderContent(contentString) {
             }
             if (trimmed === '[[ENDCODE]]') { 
                 inCodeBlock = false; 
-                await renderCodeBox(codeFilename, codeBuffer); 
+                await fastRenderCodeBox(codeFilename, codeBuffer); 
                 continue; 
             }
             if (inCodeBlock) { codeBuffer.push(line); continue; }
