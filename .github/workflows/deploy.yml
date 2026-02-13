@@ -29,8 +29,9 @@ jobs:
           # 修正点：使用 basename 提取文件名，避免路径重复
           for f in js/*.js; do
             [ -e "$f" ] || continue
-            filename=$(basename "$f")
-            curl -X POST -s --data-urlencode "js_code=$(cat $f)" https://www.toptal.com/developers/javascript-minifier/api/raw > "dist/js/$filename"
+            fn=$(basename "$f")
+            # 确认 cat $f 能读到内容，并发送给 js_code 参数
+            curl -X POST -s --data-urlencode "js_code=$(cat $f)" https://www.toptal.com/developers/javascript-minifier/api/raw > "dist/js/$fn"
           done
           
           # 4. 压缩 CSS
