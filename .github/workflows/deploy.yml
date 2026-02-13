@@ -1,15 +1,17 @@
-name: Auto Minify and Deploy
+name: Professional Auto Deploy
 
 on:
   push:
     branches:
-      - main  # 监听你在网页上对 main 分支的修改
+      - main
 
 permissions:
-  contents: write
+  contents: read
+  pages: write
+  id-token: write
 
 jobs:
-  build:
+  build-and-deploy:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -17,44 +19,27 @@ jobs:
 
       - name: Minify Assets
         run: |
-          # 1. 创建发布目录及其结构
           mkdir -p dist/css dist/js dist/contents
           
-          # 2. 拷贝静态资源文件夹 (注意：cp -r db dist 会把 db 文件夹整个塞进 dist，变成 dist/db)
-          cp -r db dist/ 2>/dev/null || :
-          cp -r images dist/ 2>/dev/null || :
-          cp -r terminal dist/ 2>/dev/null || :
+          # 1. 拷贝资源
+          cp -r db images terminal dist/ 2>/dev/null || :
           
-          # 3. 压缩 JS
-          # 修正点：使用 basename 提取文件名，避免路径重复
-          for f in js/*.js; do
-            [ -e "$f" ] || continue
-            fn=$(basename "$f")
-            # 确认 cat $f 能读到内容，并发送给 js_code 参数
-            # js_code paramter!!!
-            curl -X POST -s --data-urlencode "js_code=$(cat $f)" https://www.toptal.com/developers/javascript-minifier/api/raw > "dist/js/$fn"
-          done
+          # 2. 压缩 JS/CSS/JSON (使用本地工具更稳定)
+          for f in js/*.js; do [ -e "$f" ] || continue; fn=$(basename "$f"); npx terser "$f" -o "dist/js/$fn"; done
+          for f in css/*.css; do [ -e "$f" ] || continue; fn=$(basename "$f"); npx clean-css-cli -o "dist/css/$fn" "$f"; done
+          for f in contents/*.json; do [ -e "$f" ] || continue; fn=$(basename "$f"); jq -c . "$f" > "dist/contents/$fn"; done
           
-          # 4. 压缩 CSS
-          for f in css/*.css; do
-            [ -e "$f" ] || continue
-            filename=$(basename "$f")
-            curl -X POST -s --data-urlencode "input=$(cat $f)" https://www.toptal.com/developers/cssminifier/api/raw > "dist/css/$filename"
-          done
-          
-          # 5. 压缩 JSON
-          for f in contents/*.json; do
-            [ -e "$f" ] || continue
-            filename=$(basename "$f")
-            jq -c . "$f" > "dist/contents/$filename"
-          done
-          
-          # 6. 拷贝入口文件
-          cp index.html dist/ 2>/dev/null || :
-          cp CNAME dist/ 2>/dev/null || :
+          # 3. 拷贝核心文件
+          cp index.html CNAME dist/ 2>/dev/null || :
 
-      - name: Deploy
-        uses: JamesIves/github-pages-deploy-action@v4
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
         with:
-          folder: dist
-          branch: gh-pages # 自动推送到这个分支
+          path: './dist'
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
