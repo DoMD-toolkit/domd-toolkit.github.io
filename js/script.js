@@ -589,7 +589,7 @@ async function bootSequence() {
         await sleep(300);
         await typeText("----------------------------------------", 0);
         for (const news of newsList) {
-            await typeText(` * ${news}`, 5); 
+            await typeTextHTML(` * ${news}`, 5); 
             await sleep(100);
         }
         await typeText("----------------------------------------", 0);
