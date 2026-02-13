@@ -1,0 +1,57 @@
+name: Auto Minify and Deploy
+
+on:
+  push:
+    branches:
+      - main  # 监听你在网页上对 main 分支的修改
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Minify Assets
+        run: |
+          # 1. 创建发布目录及其结构
+          mkdir -p dist/css dist/js dist/contents
+          
+          # 2. 拷贝静态资源文件夹 (注意：cp -r db dist 会把 db 文件夹整个塞进 dist，变成 dist/db)
+          cp -r db dist/ 2>/dev/null || :
+          cp -r images dist/ 2>/dev/null || :
+          cp -r terminal dist/ 2>/dev/null || :
+          
+          # 3. 压缩 JS
+          # 修正点：使用 basename 提取文件名，避免路径重复
+          for f in js/*.js; do
+            [ -e "$f" ] || continue
+            filename=$(basename "$f")
+            curl -X POST -s --data-urlencode "js_code=$(cat $f)" https://www.toptal.com/developers/javascript-minifier/api/raw > "dist/js/$filename"
+          done
+          
+          # 4. 压缩 CSS
+          for f in css/*.css; do
+            [ -e "$f" ] || continue
+            filename=$(basename "$f")
+            curl -X POST -s --data-urlencode "input=$(cat $f)" https://www.toptal.com/developers/cssminifier/api/raw > "dist/css/$filename"
+          done
+          
+          # 5. 压缩 JSON
+          for f in contents/*.json; do
+            [ -e "$f" ] || continue
+            filename=$(basename "$f")
+            jq -c . "$f" > "dist/contents/$filename"
+          done
+          
+          # 6. 拷贝入口文件
+          cp index.html dist/ 2>/dev/null || :
+
+      - name: Deploy
+        uses: JamesIves/github-pages-deploy-action@v4
+        with:
+          folder: dist
+          branch: gh-pages # 自动推送到这个分支
