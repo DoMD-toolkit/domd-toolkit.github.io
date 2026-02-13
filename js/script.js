@@ -138,10 +138,16 @@ async function renderImage(src, altText = "IMAGE", extraClasses = "") {
         img.className = 'scan-effect';
         container.appendChild(img);
         outputDiv.appendChild(container);
-        scrollToBottom();
+        
         void img.offsetWidth; 
+		scrollToBottom();
         img.classList.add('loaded');
-        await sleep(3000); 
+        //await sleep(3000); 
+		for (let i = 0; i < 30; i++) {
+            //RetroAudio.playTypeClick(); // 滋滋声
+            scrollToBottom();           // 持续锁定底部
+            await sleep(100); 
+        }
     } catch (error) {
         // ... (错误处理保持不变)
         const errDiv = document.createElement('div');
@@ -311,10 +317,16 @@ async function fastRenderImage(src, altText = "IMAGE", extraClasses = "") {
         img.style.transition = "clip-path 0.6s cubic-bezier(0.2, 0.8, 0.2, 1)";
         container.appendChild(img);
         outputDiv.appendChild(container);
+		void img.offsetWidth;
         scrollToBottom();
-        void img.offsetWidth; 
+         
         img.classList.add('loaded');
-        await sleep(200); // 极短停顿
+        //await sleep(200); // 极短停顿
+		for (let i = 0; i < 4; i++) {
+            //RetroAudio.playTypeClick(); // 滋滋声
+            scrollToBottom();           // 持续锁定底部
+            await sleep(50); 
+        }
     } catch (e) { await typeError(`[LOAD FAIL]`); }
 }
 
