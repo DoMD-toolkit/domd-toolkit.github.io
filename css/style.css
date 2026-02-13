@@ -300,9 +300,9 @@ body.shutdown-active .crt-container {
 .img-container {
     margin: 15px 0; /* 默认靠左，上下留空 */
     /*border: 1px dashed var(--phosphor-dim);*/
-	border: 2px solid #2a2a2a;
-	box-shadow: 4px 4px 0px rgba(80, 80, 80, 0.5);
-    padding: 1px;
+	border: 1px solid var(--phosphor-main);
+	box-shadow: 5px 5px 0px rgba(51, 255, 51, 0.2);
+    padding: 0px;
     
     /* [修改] 改为块级元素，方便居中控制 */
     display: block; 
