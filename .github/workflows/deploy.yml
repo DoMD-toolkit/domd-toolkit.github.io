@@ -30,7 +30,7 @@ jobs:
           for f in contents/*.json; do [ -e "$f" ] || continue; fn=$(basename "$f"); jq -c . "$f" > "dist/contents/$fn"; done
           
           # 3. 拷贝核心文件
-          cp index.html CNAME dist/ 2>/dev/null || :
+          cp index.html CNAME favicon.ico dist/ 2>/dev/null || :
 
       - name: Setup Pages
         uses: actions/configure-pages@v4
