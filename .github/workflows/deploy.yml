@@ -49,6 +49,7 @@ jobs:
           
           # 6. 拷贝入口文件
           cp index.html dist/ 2>/dev/null || :
+          cp CNAME dist/ 2>/dev/null || :
 
       - name: Deploy
         uses: JamesIves/github-pages-deploy-action@v4
