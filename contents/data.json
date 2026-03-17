@@ -27,7 +27,7 @@
             {
               "label": "Ming-Yang Li (Lead)",
               "type": "file",
-              "content": "<span class='crt-blue'>NAME:</span> Ming-Yang Li\n<span class='crt-blue'>ROLE:</span> Lead\n[[IMG: https://www.domd.today/images/mingyang-li.jpg | PHOTO | small ]]\n<span class='crt-blue'>BIO:</span> 2023-Now, PhD candidate in Chemistry at Jilin university\n2019-2023, B.S. in Chemistry at Jilin University\n<span class='crt-blue'>RESEARCH AREA:</span> Dynamics in coarse-grained molecular dynamics simulations.\n<span class='crt-blue'>Email:</span> limy1619 AT mails.jlu.edu.cn\n<span class='crt-blue'>Publications:</span>\n1. ChemFAST: Compiling Chemical Intuition into High-Throughput Simulations for Complex (Bio)macromolecular Systems, <span style='font-style: italic;'>Nature Communications</span>, <span style='font-weight: bold;'>2026</span>, In peer review."
+              "content": "<span class='crt-blue'>NAME:</span> Ming-Yang Li\n<span class='crt-blue'>ROLE:</span> Lead\n[[IMG: https://www.domd.today/images/mingyang-li.jpg | PHOTO | small ]]\n<span class='crt-blue'>BIO:</span> 2023-Now, PhD candidate in Chemistry at Jilin university\n2019-2023, B.S. in Chemistry at Jilin University\n<span class='crt-blue'>RESEARCH AREA:</span> Coarse-grained molecular dynamics simulations.\n<span class='crt-blue'>Email:</span> limy1619 AT mails.jlu.edu.cn\n<span class='crt-blue'>Publications:</span>\n1. ChemFAST: Compiling Chemical Intuition into High-Throughput Simulations for Complex (Bio)macromolecular Systems, <span style='font-style: italic;'>Nature Communications</span>, <span style='font-weight: bold;'>2026</span>, In peer review."
             },
             {
               "label": "Rui Shi (Lead)",
