@@ -105,17 +105,25 @@
             return desc ? `${metaLine}\n${desc}` : metaLine;
         }).join('\n');
     }
-
-    function parseCV(content) {
+    
+	function parseCV(content) {
         const d = { name:'', role:'', photo:'', bio:'', research:'', email:'', pubs:[] };
         const nameM = content.match(/NAME:<\/span> (.*)\n/);
         const roleM = content.match(/ROLE:<\/span> (.*)\n/);
         const photoM = content.match(/\[\[IMG: (.*?) \|/);
-        const bioM = content.match(/BIO:<\/span> (.*)\n/);
-        const resM = content.match(/RESEARCH AREA:<\/span> (.*)\n/);
+        
+        const bioM = content.match(/BIO:<\/span> ([\s\S]*?)\n(?:<[^>]+>)?RESEARCH AREA:/);
+        const resM = content.match(/RESEARCH AREA:<\/span> ([\s\S]*?)\n(?:<[^>]+>)?Email:/);
+        
         const emailM = content.match(/Email:<\/span> (.*)\n/);
-        if(nameM) d.name = nameM[1]; if(roleM) d.role = roleM[1]; if(photoM) d.photo = photoM[1];
-        if(bioM) d.bio = prettyPrintHTMLLists(bioM[1]); if(resM) d.research = prettyPrintHTMLLists(resM[1]); if(emailM) d.email = emailM[1];
+        
+        if(nameM) d.name = nameM[1]; 
+        if(roleM) d.role = roleM[1]; 
+        if(photoM) d.photo = photoM[1];
+        if(bioM) d.bio = prettyPrintHTMLLists(bioM[1]); 
+        if(resM) d.research = prettyPrintHTMLLists(resM[1]); 
+        if(emailM) d.email = emailM[1];
+        
         const parts = content.split("Publications:</span>");
         if(parts[1]) d.pubs = parsePubContent(parts[1]);
         return d;
