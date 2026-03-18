@@ -62,7 +62,6 @@
 
     // --- 核心列表处理引擎 ---
 
-    // 导出时：去掉 ol/ul 内部所有换行
     function minifyHTMLLists(html) {
         if (!html) return html;
         return html.replace(/<(ul|ol)[\s\S]*?<\/\1>/g, (match) => {
@@ -70,7 +69,6 @@
         });
     }
 
-    // 读取时：给 ol/ul 加换行缩进方便阅读
     function prettyPrintHTMLLists(html) {
         if (!html) return html;
         return html.replace(/<(ul|ol)[^>]*>([\s\S]*?)<\/\1>/g, (match, tag, content) => {
@@ -105,31 +103,23 @@
             return desc ? `${metaLine}\n${desc}` : metaLine;
         }).join('\n');
     }
-    
-	function parseCV(content) {
+
+    function parseCV(content) {
         const d = { name:'', role:'', photo:'', bio:'', research:'', email:'', pubs:[] };
         const nameM = content.match(/NAME:<\/span> (.*)\n/);
         const roleM = content.match(/ROLE:<\/span> (.*)\n/);
         const photoM = content.match(/\[\[IMG: (.*?) \|/);
-        
         const bioM = content.match(/BIO:<\/span> ([\s\S]*?)\n(?:<[^>]+>)?RESEARCH AREA:/);
         const resM = content.match(/RESEARCH AREA:<\/span> ([\s\S]*?)\n(?:<[^>]+>)?Email:/);
-        
         const emailM = content.match(/Email:<\/span> (.*)\n/);
-        
-        if(nameM) d.name = nameM[1]; 
-        if(roleM) d.role = roleM[1]; 
-        if(photoM) d.photo = photoM[1];
-        if(bioM) d.bio = prettyPrintHTMLLists(bioM[1]); 
-        if(resM) d.research = prettyPrintHTMLLists(resM[1]); 
-        if(emailM) d.email = emailM[1];
-        
+        if(nameM) d.name = nameM[1]; if(roleM) d.role = roleM[1]; if(photoM) d.photo = photoM[1];
+        if(bioM) d.bio = prettyPrintHTMLLists(bioM[1]); if(resM) d.research = prettyPrintHTMLLists(resM[1]); if(emailM) d.email = emailM[1];
         const parts = content.split("Publications:</span>");
         if(parts[1]) d.pubs = parsePubContent(parts[1]);
         return d;
     }
 
-    async function fetchData() {
+    async function fetchData() {	
         try {
             const res = await fetch('/contents/data.json');
             db = await res.json();
@@ -158,7 +148,7 @@
     }
 
     function renderTeam() {
-        const members = findNode("TEAM & CVs").items[0].items;
+        const members = findNode("TEAM & CVs").items;
         document.getElementById('team-list').innerHTML = members.map((m, i) => {
             const d = parseCV(m.content);
             return `<div class="card"><div class="card-header">MEMBER: ${m.label} <button class="btn btn-del" onclick="removeMember(${i})">REMOVE</button></div>
@@ -217,7 +207,7 @@
         about.content = minifyHTMLLists(document.getElementById('about-content').value);
 
         // Team Sync
-        findNode("TEAM & CVs").items[0].items.forEach((m, i) => {
+        findNode("TEAM & CVs").items.forEach((m, i) => {
             m.label = document.getElementById(`team-${i}-label`).value;
             const ps = []; document.getElementById(`team-${i}-pubs`).querySelectorAll('.pub-item').forEach((_, pi) => { ps.push({ authors: document.getElementById(`team-${i}-p-${pi}-a`).value, journal: document.getElementById(`team-${i}-p-${pi}-j`).value, year: document.getElementById(`team-${i}-p-${pi}-y`).value, details: document.getElementById(`team-${i}-p-${pi}-d`).value, desc: document.getElementById(`team-${i}-p-${pi}-desc`).value }); });
             m.content = `<span class='crt-blue'>NAME:</span> ${document.getElementById(`team-${i}-name`).value}\n<span class='crt-blue'>ROLE:</span> ${document.getElementById(`team-${i}-role`).value}\n[[IMG: ${document.getElementById(`team-${i}-photo`).value} | PHOTO | small ]]\n<span class='crt-blue'>BIO:</span> ${minifyHTMLLists(document.getElementById(`team-${i}-bio`).value)}\n<span class='crt-blue'>RESEARCH AREA:</span> ${minifyHTMLLists(document.getElementById(`team-${i}-res`).value)}\n<span class='crt-blue'>Email:</span> ${document.getElementById(`team-${i}-email`).value}\n<span class='crt-blue'>Publications:</span>\n` + compilePubContent(ps);
@@ -240,24 +230,26 @@
     }
 
     function addPub(type, idx) {
-        let node = type === 'team' ? findNode("TEAM & CVs").items[0].items[idx] : findNode("PUBLICATIONS").items[idx];
+        let node = type === 'team' ? findNode("TEAM & CVs").items[idx] : findNode("PUBLICATIONS").items[idx];
         let ps = parsePubContent(type === 'team' ? node.content.split("Publications:</span>")[1] : node.content);
         ps.push({ authors:'', journal:'', year:'', details:'', desc:'' });
         node.content = type === 'team' ? node.content.split("Publications:</span>")[0] + "Publications:</span>\n" + compilePubContent(ps) : compilePubContent(ps);
         type === 'team' ? renderTeam() : renderPubs();
     }
+    
     function removePub(pre, pi) {
-        let idx = parseInt(pre.split('-')[1]); let node = pre.startsWith('team') ? findNode("TEAM & CVs").items[0].items[idx] : findNode("PUBLICATIONS").items[idx];
+        let idx = parseInt(pre.split('-')[1]); let node = pre.startsWith('team') ? findNode("TEAM & CVs").items[idx] : findNode("PUBLICATIONS").items[idx];
         let ps = parsePubContent(pre.startsWith('team') ? node.content.split("Publications:</span>")[1] : node.content);
         ps.splice(pi, 1);
         node.content = pre.startsWith('team') ? node.content.split("Publications:</span>")[0] + "Publications:</span>\n" + compilePubContent(ps) : compilePubContent(ps);
         pre.startsWith('team') ? renderTeam() : renderPubs();
     }
+    
     function addTut() { findNode("HELP").items.find(x => x.label === "TOTURIALs").items.push({label:"New", type:"file", content:""}); renderHelp(); }
     function removeTut(i) { findNode("HELP").items.find(x => x.label === "TOTURIALs").items.splice(i, 1); renderHelp(); }
     function addNews() { db.sys.news.unshift(`[${new Date().toISOString().split('T')[0]}] NEW`); renderNews(); }
-    function addMember() { findNode("TEAM & CVs").items[0].items.push({label:"New", type:"file", content:"NAME:</span> \nROLE:</span> \n[[IMG: # | PHOTO | small ]]\nBIO:</span> \nRESEARCH AREA:</span> \nEmail:</span> \n"}); renderTeam(); }
-    function removeMember(i) { findNode("TEAM & CVs").items[0].items.splice(i, 1); renderTeam(); }
+    function addMember() { findNode("TEAM & CVs").items.push({label:"New", type:"file", content:"<span class='crt-blue'>NAME:</span> \n<span class='crt-blue'>ROLE:</span> \n[[IMG: # | PHOTO | small ]]\n<span class='crt-blue'>BIO:</span> \n<span class='crt-blue'>RESEARCH AREA:</span> \n<span class='crt-blue'>Email:</span> \n<span class='crt-blue'>Publications:</span>\n"}); renderTeam(); }
+    function removeMember(i) { findNode("TEAM & CVs").items.splice(i, 1); renderTeam(); }
     function addPubGroup() { findNode("PUBLICATIONS").items.push({label:"2026", type:"file", content:""}); renderPubs(); }
     function removePubGroup(i) { findNode("PUBLICATIONS").items.splice(i, 1); renderPubs(); }
     function exportJSON() { syncAll(); const b = new Blob([JSON.stringify(db, null, 2)], {type: "application/json"}); const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = "data.json"; a.click(); }
