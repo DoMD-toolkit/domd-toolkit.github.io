@@ -76,7 +76,7 @@ async function typeTextHTML(htmlContent, delay = 8) {
 
                 const text = node.textContent;
                 let i = 0;
-                const step = 3; 
+                const step = 4; 
 
                 while (i < text.length) {
                     textNode.textContent += text.substring(i, i + step);
@@ -117,22 +117,44 @@ async function renderImage(src, altText = "IMAGE", extraClasses = "") {
     try {
         await preloadImage(src);
         const container = document.createElement('div');
-        
         container.className = `img-container ${extraClasses}`;
-        
         const img = document.createElement('img');
         img.src = src;
         img.className = 'scan-effect';
         container.appendChild(img);
-        outputDiv.appendChild(container);
+
+        const screen = document.querySelector('.screen');
         
-        void img.offsetWidth; 
-        scrollToBottom();
-        img.classList.add('loaded');
-        for (let i = 0; i < 30; i++) {
-            scrollToBottom();           
-            await sleep(100); 
+        // 1. 【核心魔法】在插入图片前，记录下当前的滚动条位置
+        const startScroll = screen.scrollTop;
+
+        // 2. 插入图片，此时 DOM 会瞬间撑开几百像素的空间
+        outputDiv.appendChild(container);
+        void img.offsetWidth; // 强制浏览器重绘
+
+        // 3. 计算插入图片后，到底产生了多少“新”的滚动距离
+        const targetScroll = screen.scrollHeight - screen.clientHeight;
+        const scrollDistance = targetScroll - startScroll;
+
+        // 启动 CSS 扫描动画 (3秒)
+        img.classList.add('loaded'); 
+
+        // 4. 接管马达：只有当确实需要往下滚时，才开启“齿轮步进”
+        if (scrollDistance > 0) {
+            const steps = 40; // 30步 * 100ms = 3000ms (完美契合 CSS 的 3s)
+            for (let i = 1; i <= steps; i++) {
+                // 将总距离切成 30 份，一点一点硬推下去
+                screen.scrollTop = startScroll + (scrollDistance * (i / steps));
+                await sleep(25); 
+            }
+        } else {
+            // 如果屏幕还没满，不需要滚动，就干等 3 秒让动画播完
+            await sleep(1000); 
         }
+
+        // 确保最终严丝合缝锁定在底部
+        scrollToBottom();
+
     } catch (error) {
         const errDiv = document.createElement('div');
         errDiv.className = 'error-msg';
@@ -140,7 +162,6 @@ async function renderImage(src, altText = "IMAGE", extraClasses = "") {
         outputDiv.appendChild(errDiv);
     }
 }
-
 function parsePythonLine(line) {
     const tokens = [];
     if (line.trim().startsWith('#')) return [{ text: line, type: 'comment' }];
@@ -280,19 +301,41 @@ async function fastRenderImage(src, altText = "IMAGE", extraClasses = "") {
         const img = document.createElement('img');
         img.src = src;
         img.className = 'scan-effect';
-        img.style.transition = "clip-path 0.6s cubic-bezier(0.2, 0.8, 0.2, 1)";
+        
+        // 【核心修复 1】抛弃现代缓动动画，强制使用绝对匀速 (linear)
+        // 让图片出现的节奏和老式扫描仪一样冷酷无情
+        img.style.transition = "clip-path 0.6s linear";
         container.appendChild(img);
+        
+        const screen = document.querySelector('.screen');
+        const startScroll = screen.scrollTop;
+        
         outputDiv.appendChild(container);
-        void img.offsetWidth;
-        scrollToBottom();
+        void img.offsetWidth; // 触发重绘
+        
+        const targetScroll = screen.scrollHeight - screen.clientHeight;
+        const scrollDistance = targetScroll - startScroll;
          
         img.classList.add('loaded');
-        for (let i = 0; i < 4; i++) {
-            scrollToBottom();           
-            await sleep(50); 
+
+        if (scrollDistance > 0) {
+            // 【核心修复 2】提高马达的刷新率！
+            // 把总时间 600ms 切成 30 份，每份 20ms (接近 50fps 的丝滑度)
+            // 这样滚动会紧紧咬住那条匀速的扫描线
+            const steps = 30;
+            for (let i = 1; i <= steps; i++) {
+                screen.scrollTop = startScroll + (scrollDistance * (i / steps));
+                await sleep(20); 
+            }
+        } else {
+            await sleep(600);
         }
+
+        scrollToBottom();
+
     } catch (e) { await typeError(`[LOAD FAIL]`); }
 }
+
 
 async function fastRenderCodeBox(filename, codeLines) {
     const panel = document.createElement('div');
@@ -326,6 +369,7 @@ async function fastRenderCodeBox(filename, codeLines) {
         
         if (codeLines.indexOf(line) % 2 === 0) {
             scrollToBottom();
+			await sleep(15);
             await new Promise(r => setTimeout(r, 0)); 
         }
     }

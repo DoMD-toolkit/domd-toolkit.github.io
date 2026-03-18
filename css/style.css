@@ -283,7 +283,7 @@ body.shutdown-active .crt-container {
     width: 100%; 
     height: auto; 
     clip-path: inset(0 0 100% 0);
-    transition: clip-path 3s linear;
+    transition: clip-path 1s linear;
     filter: 
         grayscale(0.2)      
         sepia(10%)          
