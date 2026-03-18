@@ -112,30 +112,24 @@ body.shutdown-active .crt-container {
     animation: pipBoyFlicker 0.1s infinite;
 }
 
-/* --- [关键修复 3] 扫描线 --- */
+/* --- [修复] 扫描线：去掉正片叠底，恢复纯粹的透明遮罩 --- */
 .scanlines {
     position: absolute;
     top: 0; left: 0; width: 100%; height: 100%;
     z-index: 10;
     pointer-events: none;
+    /* 稍微调低扫描线的黑度，防止它把画面压暗 */
     background: linear-gradient(
         to bottom,
         rgba(0, 0, 0, 0) 50%,
-        rgba(0, 0, 0, 0.2) 50%
+        rgba(0, 0, 0, 0.15) 50% 
     );
     background-size: 100% 4px;
-    /* 神奇的混合模式：这能让深色加深背景，但遇到高亮的绿色文字时不会将其变脏 */
-    mix-blend-mode: multiply;
+    /* 【关键删除】：删掉了 mix-blend-mode: multiply; 不再让它污染底层颜色 */
     animation: scrollScanlines 8s linear infinite;
 }
 
-@keyframes pipBoyFlicker {
-    0% { opacity: 0.97; }
-    50% { opacity: 1.0; }
-    100% { opacity: 0.98; }
-}
-
-/* --- 内容层 --- */
+/* --- [修复] 内容层：剥离白色高光，恢复 100% 纯粹的毒性荧光绿 --- */
 .screen {
     position: relative; 
     z-index: 1; 
@@ -145,12 +139,14 @@ body.shutdown-active .crt-container {
     box-sizing: border-box;
     overflow-y: auto; 
     
-    /* [优化] 给文字一点点极微弱的高光核心，让它看起来像真实发光的电子粉 */
-    color: #33ff66; /* 比背景的主色稍亮一点点，提升对比度 */
+    /* 【关键修改】：回归最纯正的 Matrix Green */
+    color: var(--phosphor-main); 
+    
+    /* 【关键修改】：去掉了所有带白色的发光层，只用绿色叠加，保证色彩饱和度爆表 */
     text-shadow: 
-        0 0 1px rgba(255, 255, 255, 0.2), 
-        0 0 8px var(--phosphor-dim),
-        0 0 15px rgba(0, 255, 65, 0.1);
+        0 0 1px var(--phosphor-main), 
+        0 0 6px var(--phosphor-dim),
+        0 0 12px rgba(0, 255, 65, 0.15);
     
     font-size: 1.3rem;
     display: flex;
