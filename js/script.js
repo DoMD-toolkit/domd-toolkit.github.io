@@ -5,7 +5,7 @@
 let fileSystem = null;
 
 // =============================================================================
-//  区域二：核心引擎区 (已修复 Bug)
+//  区域二：核心引擎区 (已修复 Bug & 优化体验)
 // =============================================================================
 
 const outputDiv = document.getElementById('terminal-output');
@@ -18,7 +18,6 @@ let state = {
     menuIndex: 0,
     currentMenuOptions: [],
     menuStack: [],
-    // [修复点 1] 新增变量，用于记录"刚才我在哪个菜单"，防止清屏后忘掉
     lastMenuContext: null 
 };
 
@@ -29,14 +28,12 @@ function scrollToBottom() {
 }
 
 // --- 基础组件 ---
-// [修改版] 支持传入 className
 async function typeText(text, delay = 8, className = '') {
     if (!text) return;
     const lineDiv = document.createElement('div');
     lineDiv.className = `output-line ${className}`;
     outputDiv.appendChild(lineDiv);
 
-    // 优化点：采用步进式打印，每跳处理 2 个字符
     let i = 0;
     const step = 2; 
     
@@ -47,21 +44,16 @@ async function typeText(text, delay = 8, className = '') {
         
         scrollToBottom();
         
-        // 只有遇到结尾类标点才微顿，其余时间全速前进
         const isEnd = /[.!?。！？]/.test(chunk);
         await sleep(isEnd ? delay * 3 : delay);
     }
 }
 
-// --- [新增] 便捷封装函数 ---
-
 async function typeError(text) {
-    // 强制使用 'text-error' 样式，速度稍慢(30ms)让用户看清
     await typeText(text, 30, 'text-error');
 }
 
 async function typeDebug(text) {
-    // 强制使用 'text-debug' 样式
     await typeText(text, 10, 'text-debug');
 }
 
@@ -84,7 +76,6 @@ async function typeTextHTML(htmlContent, delay = 8) {
 
                 const text = node.textContent;
                 let i = 0;
-                // 每次搬运 3 个字符，平衡流畅度与速度
                 const step = 3; 
 
                 while (i < text.length) {
@@ -101,14 +92,13 @@ async function typeTextHTML(htmlContent, delay = 8) {
                     newElement.setAttribute(attr.name, attr.value);
                 });
                 target.appendChild(newElement);
-                // 递归内部也要保持高速
                 await transferNodes(node, newElement);
             }
         }
     }
 
     await transferNodes(tempDiv, lineDiv);
-    await sleep(20); // 结尾稍作收放
+    await sleep(20); 
 }
 
 
@@ -128,8 +118,6 @@ async function renderImage(src, altText = "IMAGE", extraClasses = "") {
         await preloadImage(src);
         const container = document.createElement('div');
         
-        // [修改] 将基础类名和额外的修饰符类名拼接起来
-        // 例如：'img-container' + ' ' + 'wide center'
         container.className = `img-container ${extraClasses}`;
         
         const img = document.createElement('img');
@@ -139,16 +127,13 @@ async function renderImage(src, altText = "IMAGE", extraClasses = "") {
         outputDiv.appendChild(container);
         
         void img.offsetWidth; 
-		scrollToBottom();
+        scrollToBottom();
         img.classList.add('loaded');
-        //await sleep(3000); 
-		for (let i = 0; i < 30; i++) {
-            //RetroAudio.playTypeClick(); // 滋滋声
-            scrollToBottom();           // 持续锁定底部
+        for (let i = 0; i < 30; i++) {
+            scrollToBottom();           
             await sleep(100); 
         }
     } catch (error) {
-        // ... (错误处理保持不变)
         const errDiv = document.createElement('div');
         errDiv.className = 'error-msg';
         errDiv.textContent = `[ERROR: LOAD FAILED - ${src}]`;
@@ -231,45 +216,30 @@ async function renderContent(contentString) {
             codeBuffer.push(line); 
             continue; 
         }
-		// [修改版] 图片指令解析逻辑
-		if (trimmed.startsWith('[[IMG:')) {
-			// 1. 去掉前后的中括号和 IMG: 标记
-			const rawContent = trimmed.replace(/\[\[IMG:|\]\]/g, '');
-			
-			// 2. 用竖线分割，并去除每个部分的首尾空格
-			// 例如: ["url", "alt text", "wide", "center"]
-			const parts = rawContent.split('|').map(p => p.trim());
-
-			const src = parts[0]; // 第一个必须是 URL
-			// 第二个是 ALT，如果没写就用默认值
-			const alt = parts[1] ? parts[1] : "IMAGE";
-			
-			// [新增] 提取剩下的部分作为修饰符类名
-			// parts.slice(2) 拿到的是 ["wide", "center"]
-			// join(' ') 把它变成字符串 "wide center"
-			const extraClasses = parts.slice(2).join(' ');
-
-			// 调用渲染函数，传入解析出的三个参数
-			await renderImage(src, alt, extraClasses); 
-			continue;
-		}
+        if (trimmed.startsWith('[[IMG:')) {
+            const rawContent = trimmed.replace(/\[\[IMG:|\]\]/g, '');
+            const parts = rawContent.split('|').map(p => p.trim());
+            const src = parts[0]; 
+            const alt = parts[1] ? parts[1] : "IMAGE";
+            const extraClasses = parts.slice(2).join(' ');
+            await renderImage(src, alt, extraClasses); 
+            continue;
+        }
         if (trimmed.startsWith('[[PAUSE:')) { 
             await sleep(parseInt(trimmed.replace(/\D/g, ''))); 
             continue; 
         }
         if (line.includes('<') && line.includes('>')) {
-			await typeTextHTML(line);
-		} else {
-			await typeText(line);
-		}
-	}
+            await typeTextHTML(line);
+        } else {
+            await typeText(line);
+        }
+    }
     await typeText("\n>> [EOF]");
     await typeText("Press [ENTER] to return...");
     waitForEnter();
 }
 
-
-// [零件A] 极速 HTML 打字机：分块打印，每帧输出 8 个字符
 async function fastTypeTextHTML(htmlContent) {
     const lineDiv = document.createElement('div');
     lineDiv.className = 'output-line';
@@ -285,7 +255,6 @@ async function fastTypeTextHTML(htmlContent) {
                 const text = node.textContent;
                 let i = 0;
                 while (i < text.length) {
-                    // 每次取 8 个字，大幅减少 DOM 更新次数
                     textNode.textContent += text.substring(i, i + 8);
                     i += 8;
                     scrollToBottom();
@@ -302,7 +271,6 @@ async function fastTypeTextHTML(htmlContent) {
     await transfer(tempDiv, lineDiv);
 }
 
-// [零件B] 极速图片渲染：缩短动画到 0.6s，等待仅 200ms
 async function fastRenderImage(src, altText = "IMAGE", extraClasses = "") {
     await typeText(`>> FAST-LOAD: ${altText}`, 2); 
     try {
@@ -312,18 +280,15 @@ async function fastRenderImage(src, altText = "IMAGE", extraClasses = "") {
         const img = document.createElement('img');
         img.src = src;
         img.className = 'scan-effect';
-        // 强制覆盖 CSS 的 3s 动画，改为极速扫描
         img.style.transition = "clip-path 0.6s cubic-bezier(0.2, 0.8, 0.2, 1)";
         container.appendChild(img);
         outputDiv.appendChild(container);
-		void img.offsetWidth;
+        void img.offsetWidth;
         scrollToBottom();
          
         img.classList.add('loaded');
-        //await sleep(200); // 极短停顿
-		for (let i = 0; i < 4; i++) {
-            //RetroAudio.playTypeClick(); // 滋滋声
-            scrollToBottom();           // 持续锁定底部
+        for (let i = 0; i < 4; i++) {
+            scrollToBottom();           
             await sleep(50); 
         }
     } catch (e) { await typeError(`[LOAD FAIL]`); }
@@ -335,7 +300,6 @@ async function fastRenderCodeBox(filename, codeLines) {
     
     const header = document.createElement('div');
     header.className = 'code-header';
-    // 配合 Pip-Boy 风格，可以在这里加个 [LOADING...] 状态
     header.innerHTML = `<span>SRC: ${filename}</span><span>BURST_READ</span>`;
     panel.appendChild(header);
     
@@ -345,56 +309,43 @@ async function fastRenderCodeBox(filename, codeLines) {
     outputDiv.appendChild(panel);
     scrollToBottom();
 
-    // 每一行进行极速渲染
     for (let line of codeLines) {
         const lineDiv = document.createElement('div');
         body.appendChild(lineDiv);
         
         const tokens = parsePythonLine(line);
         
-        // --- 核心优化：不再逐字打印 ---
         for (let token of tokens) {
             const span = document.createElement('span');
             if (token.type !== 'normal') span.className = `token-${token.type}`;
-            
-            // 直接一次性填入整个 Token 的文字
             span.textContent = token.text;
             lineDiv.appendChild(span);
         }
         
         lineDiv.appendChild(document.createTextNode('\n'));
         
-        // 每行处理完后的微小停顿，给浏览器喘息机会，同时产生“刷刷刷”的视觉节奏
-        // 如果想更快，可以每 5 行才 await 一次
         if (codeLines.indexOf(line) % 2 === 0) {
             scrollToBottom();
             await new Promise(r => setTimeout(r, 0)); 
         }
     }
     
-    // 渲染完成，把 header 状态改回来
     header.innerHTML = `<span>SRC: ${filename}</span><span>PYTHON</span>`;
     await sleep(50); 
 }
 
-
-// [修改版] 爆发模式渲染器 (带视觉特效)
 async function fastRenderContent(contentString) {
-    // 1. 【开启特效】激活超频状态
     document.body.classList.add('system-overclock');
-
     state.mode = 'RenderContent';
     interactiveDiv.innerHTML = '';
     globalCursor.style.display = 'inline-block';
 
-    // 提示语也配合一下氛围
     await typeDebug(">> WARNING: HIGH-SPEED DATA STREAM INITIATED...", 8);
     await sleep(500);
 
     const lines = contentString.split('\n');
     let inCodeBlock = false, codeBuffer = [], codeFilename = "script.py";
 
-    // 使用 try-finally 确保特效一定会被关闭
     try {
         for (let line of lines) {
             const trimmed = line.trim();
@@ -418,25 +369,21 @@ async function fastRenderContent(contentString) {
                 const src = parts[0];
                 const alt = parts[1] || "IMAGE";
                 const extraClasses = parts.slice(2).join(' ');
-
-                // 调用高速版图片渲染
                 await fastRenderImage(src, alt, extraClasses); 
                 continue;
             }
 
             if (trimmed.startsWith('[[PAUSE:')) { 
                 const pTime = parseInt(trimmed.replace(/\D/g, ''));
-                await sleep(pTime / 4); // 爆发模式下暂停时间大幅缩短
+                await sleep(pTime / 4); 
                 continue; 
             }
 
             if (line.length > 0) {
-                // 调用高速版 HTML 打字机
                 await fastTypeTextHTML(line);
             }
         }
     } finally {
-        // 2. 【关闭特效】渲染结束（无论成功失败），移除超频状态
         document.body.classList.remove('system-overclock');
     }
 
@@ -445,8 +392,6 @@ async function fastRenderContent(contentString) {
     await typeText("Press [ENTER] to return...", 5);
     waitForEnter();
 }
-
-
 
 
 function renderMenuFromData(title, menuItems, animate = false) {
@@ -465,7 +410,6 @@ function renderMenuFromData(title, menuItems, animate = false) {
     const menuContainer = document.createElement('div');
     menuContainer.className = 'menu-container';
     
-    // [新增] 如果 animate 为 true，加上 CSS 动画类
     if (animate) {
         menuContainer.classList.add('menu-fade-in');
     }
@@ -495,44 +439,38 @@ function updateMenuVisuals() {
     });
 }
 
-// [修复点 2] 路由控制逻辑增强
+// [修复点 1] 路由控制：子菜单和返回也都加上 true 以触发动画
 async function handleSelection(option) {
-    // 1. 在清空界面之前，先获取当前的标题和菜单项
-    // 这样如果进入文件查看模式，我们以后还能记得怎么回来
     const titleEl = document.querySelector('.menu-container div:first-child');
     const currentTitle = titleEl ? titleEl.textContent : "MAIN MENU"; 
-    // 过滤掉 'back' 按钮，因为渲染函数会自动加
     const currentItems = state.currentMenuOptions.filter(i => i.type !== 'back');
 
     if (option.type === 'menu') {
-        // 进入下一级：把"当前"存入栈中
         state.menuStack.push({ 
             title: currentTitle, 
             items: currentItems 
         });
-        renderMenuFromData(`SUBMENU // ${option.label}`, option.items);
+        // 进入子菜单也淡入
+        renderMenuFromData(`SUBMENU // ${option.label}`, option.items, true);
     } 
     else if (option.type === 'file') {
-        // 进入文件：把"当前"存入 lastMenuContext
-		//console.log(option.mode);
         state.lastMenuContext = {
             title: currentTitle,
             items: currentItems
         };
         if (option.mode === 'fast') {
-			//console.log(option.content);
             await fastRenderContent(option.content);
         } else {
             await renderContent(option.content);
         }
     } 
     else if (option.type === 'back') {
-        // 返回上一级：从栈中恢复
         const parent = state.menuStack.pop();
         if (parent) {
-            renderMenuFromData(parent.title, parent.items);
+            // 返回上级也淡入
+            renderMenuFromData(parent.title, parent.items, true);
         } else {
-            renderMenuFromData("MAIN MENU // DOMD-TOOLKIT", fileSystem.root);
+            renderMenuFromData("MAIN MENU // DOMD-TOOLKIT", fileSystem.root, true);
         }
     } 
     else if (option.type === 'action') {
@@ -541,24 +479,46 @@ async function handleSelection(option) {
     }
 }
 
-// [修复点 3] 回车返回逻辑
+// [修复点 1] 确认阅读完毕后，呼出菜单加上 true 触发动画
 function waitForEnter() {
     state.mode = 'WAIT';
     const handler = (e) => {
-        // 判断：如果是点击事件，或者是按下了 Enter 键
         if (e.type === 'click' || e.key === 'Enter') {
             document.removeEventListener('keydown', handler);
-            document.removeEventListener('click', handler); // 记得也要移除点击监听
+            document.removeEventListener('click', handler); 
             
             if (state.lastMenuContext) {
-                renderMenuFromData(state.lastMenuContext.title, state.lastMenuContext.items);
+                renderMenuFromData(state.lastMenuContext.title, state.lastMenuContext.items, true);
             } else {
-                renderMenuFromData("MAIN MENU // DOMD-TOOLKIT", fileSystem.root);
+                renderMenuFromData("MAIN MENU // DOMD-TOOLKIT", fileSystem.root, true);
             }
         }
     };
     document.addEventListener('keydown', handler);
-    document.addEventListener('click', handler); // 新增：监听全局点击
+    document.addEventListener('click', handler); 
+}
+
+// --- [修复点 2] 抽离核心：将展示通知信息的逻辑独立出来 ---
+async function displaySystemHeader() {
+    if (!fileSystem || !fileSystem.sys) return;
+
+    if (fileSystem.sys.boot_msg) {
+        await typeText(`${fileSystem.sys.boot_msg}`, 5);
+        await sleep(100);
+    }
+    
+    const newsList = fileSystem.sys.news;
+    if (newsList && newsList.length > 0) {
+        await typeText(">> CHECKING SYSTEM NOTICES...", 5);
+        await sleep(200);
+        await typeText("----------------------------------------", 0);
+        for (const news of newsList) {
+            await typeTextHTML(` * ${news}`, 5); 
+            await sleep(50); // 这里速度可以快一点，不需要像第一次开机那么慢
+        }
+        await typeText("----------------------------------------", 0);
+        await sleep(300);
+    }
 }
 
 // --- 功能函数 ---
@@ -566,10 +526,16 @@ function waitForEnter() {
 async function clearTerminal() {
     state.mode = 'BUSY';
     interactiveDiv.innerHTML = '';
-    await typeText(">> CLEARING BUFFER...", 5);
+    
+    // 直接清空大屏幕，干净利落
     outputDiv.innerHTML = ''; 
-    state.menuStack = []; // 清屏重置层级
-    renderMenuFromData("MAIN MENU // DOMD-TOOLKIT", fileSystem.root);
+    state.menuStack = []; 
+    
+    // [修复点 2] 重新把顶部的通知栏打出来
+    await displaySystemHeader();
+
+    // 重新呼出菜单（带动画）
+    renderMenuFromData("MAIN MENU // DOMD-TOOLKIT", fileSystem.root, true);
 }
 
 async function performShutdown() {
@@ -583,11 +549,11 @@ async function performShutdown() {
 
 document.addEventListener('keydown', (e) => {
     if (state.mode !== 'MENU') return;
-	const keyNum = parseInt(e.key); // 尝试将按键转为数字
+    const keyNum = parseInt(e.key); 
     if (keyNum > 0 && keyNum <= state.currentMenuOptions.length) {
         e.preventDefault();
         handleSelection(state.currentMenuOptions[keyNum - 1]);
-        return; // 直接触发并跳出，不执行后面的上下键逻辑
+        return; 
     }
     if (e.key === 'ArrowUp') { e.preventDefault(); state.menuIndex = (state.menuIndex > 0) ? state.menuIndex - 1 : state.currentMenuOptions.length - 1; updateMenuVisuals(); }
     else if (e.key === 'ArrowDown') { e.preventDefault(); state.menuIndex = (state.menuIndex < state.currentMenuOptions.length - 1) ? state.menuIndex + 1 : 0; updateMenuVisuals(); }
@@ -603,63 +569,33 @@ async function bootSequence() {
     await typeText(`INITIALIZING NETWORK...`, 5);
     await sleep(200);
 
-    // --- [新增] 异步加载 JSON 数据 ---
     try {
         await typeText(">> FETCHING DATA ...", 5);
-        
-        // 发起网络请求
         const response = await fetch('/contents/data.json'); 
-        
-        // 检查文件是否存在
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        
-        // 解析 JSON 并赋值给全局变量
+        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
         fileSystem = await response.json();
-        
         await sleep(300);
         await typeTextHTML(">> DATA INTEGRITY CHECK: <span class='crt-blue'>PASS</span>", 5);
-
     } catch (error) {
-        // 如果加载失败（比如 JSON 格式写错了，或者文件没找到）
         await typeError(`[FATAL ERROR] FAILED TO LOAD SYSTEM DATA.`, 5);
         await typeDebug(`DEBUG INFO: ${error.message}`, 5);
         await typeDebug(`Please check server connection.`, 5);
-        // 停止启动，显示红色报错
         const errDiv = document.createElement('div');
         errDiv.className = 'error-msg';
         errDiv.textContent = "SYSTEM HALTED";
         outputDiv.appendChild(errDiv);
-        return; // 终止程序
+        return; 
     }
-    // ----------------------------------
-
-    // 数据加载成功，继续原来的流程
-    await typeText(`${fileSystem.sys.boot_msg}`, 5);
-    await sleep(200);
 
     const staticHeader = document.getElementById('static-header');
     if (staticHeader) staticHeader.style.opacity = '1';
     await sleep(500);
 
-    const newsList = fileSystem.sys.news;
-    if (newsList && newsList.length > 0) {
-        await typeText(">> CHECKING SYSTEM NOTICES...", 5);
-        await sleep(300);
-        await typeText("----------------------------------------", 0);
-        for (const news of newsList) {
-            await typeTextHTML(` * ${news}`, 5); 
-            await sleep(100);
-        }
-        await typeText("----------------------------------------", 0);
-        await sleep(500);
-    }
+    // [修复点 2] 调用抽离出来的展示通知函数
+    await displaySystemHeader();
 
     state.isBooting = false;
-    // 启动主菜单
     renderMenuFromData("MAIN MENU // DOMD-TOOLKIT", fileSystem.root, true);
 }
 
-// 别忘了保留最后的 window.onload
 window.onload = bootSequence;
