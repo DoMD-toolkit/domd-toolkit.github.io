@@ -76,7 +76,7 @@ async function typeTextHTML(htmlContent, delay = 8) {
 
                 const text = node.textContent;
                 let i = 0;
-                const step = 4; 
+                const step = 3; 
 
                 while (i < text.length) {
                     textNode.textContent += text.substring(i, i + step);
