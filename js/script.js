@@ -140,9 +140,9 @@ async function renderImage(src, altText = "IMAGE", extraClasses = "") {
         const targetScroll = screen.scrollHeight - screen.clientHeight;
         const maxScrollDistance = targetScroll - startScroll;
 
-        const scanSpeed = 250; 
+        const scanSpeed = 240; 
         let durationSec = imgHeight / scanSpeed;
-        if (durationSec < 1) durationSec = 1;
+        if (durationSec < 0.8) durationSec = 0.8;
         const durationMs = durationSec * 1000;
 
  
