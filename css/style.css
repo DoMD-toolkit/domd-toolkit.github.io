@@ -39,7 +39,7 @@ body {
     width: 95vw;
     height: 92vh;
     background-color: var(--terminal-bg);
-    border-radius: 40px;
+    border-radius: 50px;
     position: relative;
     overflow: hidden;
     border: 5px solid var(--crt-border-color);
@@ -103,12 +103,12 @@ body.shutdown-active .crt-container {
     z-index: 11;
     pointer-events: none;
     /* 采用更细腻的多级渐变：中心区域留出更大透亮区，只在最边缘迅速压暗，立体感倍增且不显得脏 */
-    background: radial-gradient(
-        circle at 50% 50%, 
-        transparent 60%, 
-        rgba(0, 0, 0, 0.1) 75%, 
-        rgba(0, 0, 0, 0.4) 85%, 
-        rgba(0, 0, 0, 0.85) 100%
+	background: radial-gradient(
+        circle at 50% 50%,     /* 1. 光源中心点：正中心 */
+        transparent 80%,       /* 2. 绝对清晰区：从中心到 60% 的范围完全透明 */
+        rgba(0, 0, 0, 0.1) 85%,/* 3. 阴影起步区：到 75% 时，加上 10% 的黑 */
+        rgba(0, 0, 0, 0.4) 90%,/* 4. 阴影加深区：到 85% 时，变成 40% 的黑 */
+        rgba(0, 0, 0, 0.85) 100% /* 5. 绝对边缘区：最外圈角落，黑度达到 85% */
     );
     animation: pipBoyFlicker 0.1s infinite;
 }
