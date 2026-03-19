@@ -112,6 +112,7 @@ function preloadImage(src, timeout = 10000) {
     });
 }
 
+// constant velocity, min time for pic is 1s
 async function renderImage(src, altText = "IMAGE", extraClasses = "") {
     await typeText(`>> DOWNLOADING: ${altText}...`, 5);
     try {
@@ -139,20 +140,29 @@ async function renderImage(src, altText = "IMAGE", extraClasses = "") {
         const targetScroll = screen.scrollHeight - screen.clientHeight;
         const maxScrollDistance = targetScroll - startScroll;
 
+        const scanSpeed = 250; 
+        let durationSec = imgHeight / scanSpeed;
+        if (durationSec < 1) durationSec = 1;
+        const durationMs = durationSec * 1000;
+
+ 
+        img.style.transition = `clip-path ${durationSec}s linear`;
         img.classList.add('loaded');
 
         if (maxScrollDistance > 0) {
-            const steps = 25;
+            const stepTime = 40;
+            const steps = Math.ceil(durationMs / stepTime);
+            
             for (let i = 1; i <= steps; i++) {
                 const currentScanY = imgHeight * (i / steps);
                 if (currentScanY > clampedSafeHeight) {
                     let pushDown = currentScanY - clampedSafeHeight;
                     screen.scrollTop = startScroll + Math.min(pushDown, maxScrollDistance);
                 }
-                await sleep(40); 
+                await sleep(stepTime); 
             }
         } else {
-            await sleep(1000); 
+            await sleep(durationMs); 
         }
 
         scrollToBottom();
@@ -313,6 +323,8 @@ async function fastTypeTextHTML(htmlContent) {
     await transfer(tempDiv, lineDiv);
 }
 
+
+// 0.6s for all pics!
 async function fastRenderImage(src, altText = "IMAGE", extraClasses = "") {
     await typeText(`>> FAST-LOAD: ${altText}`, 2); 
     try {
@@ -323,7 +335,7 @@ async function fastRenderImage(src, altText = "IMAGE", extraClasses = "") {
         img.src = src;
         img.className = 'scan-effect';
         
-        img.style.transition = "clip-path 0.6s linear";
+        img.style.transition = "clip-path 0.4s linear";
         container.appendChild(img);
         
         const screen = document.querySelector('.screen');
@@ -345,23 +357,82 @@ async function fastRenderImage(src, altText = "IMAGE", extraClasses = "") {
         img.classList.add('loaded');
 
         if (maxScrollDistance > 0) {
-            const steps = 30;
+            const steps = 40;
             for (let i = 1; i <= steps; i++) {
                 const currentScanY = imgHeight * (i / steps);
                 if (currentScanY > clampedSafeHeight) {
                     let pushDown = currentScanY - clampedSafeHeight;
                     screen.scrollTop = startScroll + Math.min(pushDown, maxScrollDistance);
                 }
-                await sleep(20); 
+                await sleep(10); 
             }
         } else {
-            await sleep(600);
+            await sleep(400);
         }
 
         scrollToBottom();
 
     } catch (e) { await typeError(`>> [LOAD FAIL]`); }
 }
+
+
+// constant speed version for fast mode, 600px/s, 0.6s at least
+// async function fastRenderImage(src, altText = "IMAGE", extraClasses = "") {
+    // await typeText(`>> FAST-LOAD: ${altText}`, 2); 
+    // try {
+        // await preloadImage(src);
+        // const container = document.createElement('div');
+        // container.className = `img-container ${extraClasses}`;
+        // const img = document.createElement('img');
+        // img.src = src;
+        // img.className = 'scan-effect';
+        // container.appendChild(img);
+        
+        // const screen = document.querySelector('.screen');
+        // const startScroll = screen.scrollTop;
+        
+        // outputDiv.appendChild(container);
+        // void img.offsetWidth;
+        
+        // const rect = img.getBoundingClientRect();
+        // const screenRect = screen.getBoundingClientRect();
+        // const imgHeight = img.offsetHeight;
+
+        // let safeVisibleHeight = (screenRect.bottom - CONFIG.CRT_SCROLL_PADDING) - rect.top;
+        // const clampedSafeHeight = Math.max(0, Math.min(safeVisibleHeight, imgHeight));
+        
+        // const targetScroll = screen.scrollHeight - screen.clientHeight;
+        // const maxScrollDistance = targetScroll - startScroll;
+         
+        // const fastScanSpeed = 600;
+        // let durationSec = imgHeight / fastScanSpeed;
+        // if (durationSec < 0.6) durationSec = 0.6;
+        // const durationMs = durationSec * 1000;
+
+        // img.style.transition = `clip-path ${durationSec}s linear`;
+        // img.classList.add('loaded');
+
+        // if (maxScrollDistance > 0) {
+            // const stepTime = 20;
+            // const steps = Math.ceil(durationMs / stepTime);
+            
+            // for (let i = 1; i <= steps; i++) {
+                // const currentScanY = imgHeight * (i / steps);
+                // if (currentScanY > clampedSafeHeight) {
+                    // let pushDown = currentScanY - clampedSafeHeight;
+                    // screen.scrollTop = startScroll + Math.min(pushDown, maxScrollDistance);
+                // }
+                // await sleep(stepTime); 
+            // }
+        // } else {
+            // await sleep(durationMs);
+        // }
+
+        // scrollToBottom();
+
+    // } catch (e) { await typeError(`>> [LOAD FAIL]`); }
+// }
+
 
 async function fastRenderCodeBox(filename, codeLines) {
     const panel = document.createElement('div');

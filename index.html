@@ -10,16 +10,15 @@
 		  tex: {
 			inlineMath: [['$', '$'], ['\\(', '\\)']],
 			displayMath: [['$$', '$$'], ['\\[', '\\]']],
-			processEscapes: true // 允许使用 \$ 来转义美元符号
+			processEscapes: true // allow \$
 		  },
 		  options: {
-			// 避开代码块，防止你的 Python 代码被意外解析成公式
-			skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code', 'span.token-string']
+			skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code', 'span.token-string'],
+			ignoreHtmlClass: 'code-panel|code-header|code-body'
 		  },
 		  chtml: {
-			// 字体匹配复古感，不使用默认的巨大缩放
 			scale: 1.1,
-			displayAlign: 'left', // 终端里的公式一般靠左对齐比较硬核
+			displayAlign: 'left',
 			displayIndent: '2em'
 		  }
 		};
