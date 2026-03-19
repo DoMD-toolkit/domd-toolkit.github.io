@@ -1,33 +1,38 @@
 // =============================================================================
-//  区域一：数据配置区 (在这里修改内容)
+//  SYSTEM CONFIGURATION & STATE (系统配置与状态机)
 // =============================================================================
 
-let fileSystem = null;
+const CONFIG = {
+    DATA_URL: '/contents/data.json',  // 系统的虚拟数据源路径
+    CRT_SCROLL_PADDING: 40            // 模拟物理推纸时，预留的底部安全缓冲高度 (像素)
+};
 
-// =============================================================================
-//  区域二：核心引擎区 (已修复 Bug & 优化体验)
-// =============================================================================
+let fileSystem = null;                // 存储从远程获取的系统文件数据树
+
+let state = {
+    isBooting: true,                  // 标识系统是否正处于开机引导序列
+    mode: 'NONE',                     // 终端当前工作模式 (NONE, WAIT, MENU, RenderContent, BUSY, SHUTDOWN)
+    menuIndex: 0,                     // 菜单中当前被光标选中的项目索引
+    currentMenuOptions: [],           // 当前活动菜单层级的渲染数据集
+    menuStack: [],                    // 菜单历史记录栈 (用于支持多级子菜单的后退功能)
+    lastMenuContext: null             // 记忆最后一次所在的菜单上下文 (用于阅读内容后返回)
+};
 
 const outputDiv = document.getElementById('terminal-output');
 const interactiveDiv = document.getElementById('interactive-area');
 const globalCursor = document.getElementById('global-cursor');
 
-let state = {
-    isBooting: true,
-    mode: 'NONE', 
-    menuIndex: 0,
-    currentMenuOptions: [],
-    menuStack: [],
-    lastMenuContext: null 
-};
+// =============================================================================
+//  CORE ENGINE (核心渲染引擎)
+// =============================================================================
 
 const sleep = ms => new Promise(r => setTimeout(r, ms));
+
 function scrollToBottom() {
     const screen = document.querySelector('.screen');
     screen.scrollTop = screen.scrollHeight;
 }
 
-// --- 基础组件 ---
 async function typeText(text, delay = 8, className = '') {
     if (!text) return;
     const lineDiv = document.createElement('div');
@@ -57,7 +62,6 @@ async function typeDebug(text) {
     await typeText(text, 10, 'text-debug');
 }
 
-
 async function typeTextHTML(htmlContent, delay = 8) {
     const lineDiv = document.createElement('div');
     lineDiv.className = 'output-line';
@@ -68,12 +72,10 @@ async function typeTextHTML(htmlContent, delay = 8) {
 
     async function transferNodes(source, target) {
         const nodes = Array.from(source.childNodes);
-        
         for (const node of nodes) {
             if (node.nodeType === Node.TEXT_NODE) {
                 const textNode = document.createTextNode('');
                 target.appendChild(textNode);
-
                 const text = node.textContent;
                 let i = 0;
                 const step = 3; 
@@ -81,7 +83,6 @@ async function typeTextHTML(htmlContent, delay = 8) {
                 while (i < text.length) {
                     textNode.textContent += text.substring(i, i + step);
                     i += step;
-                    
                     scrollToBottom();
                     await sleep(delay);
                 }
@@ -101,7 +102,6 @@ async function typeTextHTML(htmlContent, delay = 8) {
     await sleep(20); 
 }
 
-
 function preloadImage(src, timeout = 10000) {
     return new Promise((resolve, reject) => {
         const img = new Image();
@@ -112,9 +112,6 @@ function preloadImage(src, timeout = 10000) {
     });
 }
 
-const CRT_SCROLL_PADDING = 40; 
-
-// --- [修复版] 常规图片渲染：扫描线咬合 + 提前缓冲推纸 ---
 async function renderImage(src, altText = "IMAGE", extraClasses = "") {
     await typeText(`>> DOWNLOADING: ${altText}...`, 5);
     try {
@@ -130,35 +127,26 @@ async function renderImage(src, altText = "IMAGE", extraClasses = "") {
         const startScroll = screen.scrollTop;
 
         outputDiv.appendChild(container);
-        void img.offsetWidth; // 强制重绘，获取真实物理数据
+        void img.offsetWidth;
 
-        // 获取物理数据
         const rect = img.getBoundingClientRect();
         const screenRect = screen.getBoundingClientRect();
         const imgHeight = img.offsetHeight;
 
-        // 【核心物理引擎 2.0】引入预留缓冲检测
-        // 计算如果不滚动，图片有多少像素是在“安全可见区域”（即屏幕底部减去缓冲区）之内的
-        let safeVisibleHeight = (screenRect.bottom - CRT_SCROLL_PADDING) - rect.top;
-        // 将这个高度限制在 0 到 图片真实高度 之间
+        let safeVisibleHeight = (screenRect.bottom - CONFIG.CRT_SCROLL_PADDING) - rect.top;
         const clampedSafeHeight = Math.max(0, Math.min(safeVisibleHeight, imgHeight));
 
         const targetScroll = screen.scrollHeight - screen.clientHeight;
         const maxScrollDistance = targetScroll - startScroll;
 
-        img.classList.add('loaded'); // 启动 3s 的匀速线性扫描
+        img.classList.add('loaded');
 
         if (maxScrollDistance > 0) {
-            const steps = 25; // 30步 * 100ms = 3000ms
+            const steps = 25;
             for (let i = 1; i <= steps; i++) {
-                // 计算当前扫描线所在的 Y 轴坐标
                 const currentScanY = imgHeight * (i / steps);
-                
-                // 【物理碰撞触发】如果扫描线还在“安全可见区域”内，绝对不滚！
-                // 只有当扫描线越过了安全边界（距离屏幕底部 CRT_SCROLL_PADDING 像素时），才开始往下推纸！
                 if (currentScanY > clampedSafeHeight) {
                     let pushDown = currentScanY - clampedSafeHeight;
-                    // 确保推纸距离不会超过最大可滚动距离
                     screen.scrollTop = startScroll + Math.min(pushDown, maxScrollDistance);
                 }
                 await sleep(40); 
@@ -167,7 +155,7 @@ async function renderImage(src, altText = "IMAGE", extraClasses = "") {
             await sleep(1000); 
         }
 
-        scrollToBottom(); // 确保最终严丝合缝锁定在底部
+        scrollToBottom();
 
     } catch (error) {
         const errDiv = document.createElement('div');
@@ -176,7 +164,6 @@ async function renderImage(src, altText = "IMAGE", extraClasses = "") {
         outputDiv.appendChild(errDiv);
     }
 }
-
 
 function parsePythonLine(line) {
     const tokens = [];
@@ -222,8 +209,6 @@ async function renderCodeBox(filename, codeLines) {
     }
     await sleep(100);
 }
-
-// --- 核心引擎 ---
 
 async function renderContent(contentString) {
     state.mode = 'RenderContent';
@@ -272,19 +257,16 @@ async function renderContent(contentString) {
             await typeText(line);
         }
     }
+    
     await typeText("\n>> [EOF]");
+    
     const hasMath = contentString.includes('$') || contentString.includes('$$');
     if (hasMath && window.MathJax && typeof window.MathJax.typeset === 'function') {
         await typeText(">> RENDERING MATH EQUATIONS...", 5);
-
         try {
-            // 清空旧 DOM 缓存
             window.MathJax.typesetClear([outputDiv]);
-            
             window.MathJax.typeset([outputDiv]);
-
             await typeText(">> MATH ENGINE: [DONE]", 2, 'crt-blue');
-            
         } catch (err) {
             if (typeof window.MathJax.typesetPromise === 'function') {
                 window.MathJax.typesetPromise([outputDiv]).catch(e => console.warn("MathJax Async:", e));
@@ -295,6 +277,7 @@ async function renderContent(contentString) {
             }
         }
     }
+    
     await typeText("Press [ENTER] to return...");
     waitForEnter();
 }
@@ -330,7 +313,6 @@ async function fastTypeTextHTML(htmlContent) {
     await transfer(tempDiv, lineDiv);
 }
 
-// --- [修复版] 极速图片渲染：爆发模式下的缓冲同步 ---
 async function fastRenderImage(src, altText = "IMAGE", extraClasses = "") {
     await typeText(`>> FAST-LOAD: ${altText}`, 2); 
     try {
@@ -341,7 +323,6 @@ async function fastRenderImage(src, altText = "IMAGE", extraClasses = "") {
         img.src = src;
         img.className = 'scan-effect';
         
-        // 爆发模式：0.6s linear
         img.style.transition = "clip-path 0.6s linear";
         container.appendChild(img);
         
@@ -355,8 +336,7 @@ async function fastRenderImage(src, altText = "IMAGE", extraClasses = "") {
         const screenRect = screen.getBoundingClientRect();
         const imgHeight = img.offsetHeight;
 
-        // 同步引入缓冲检测
-        let safeVisibleHeight = (screenRect.bottom - CRT_SCROLL_PADDING) - rect.top;
+        let safeVisibleHeight = (screenRect.bottom - CONFIG.CRT_SCROLL_PADDING) - rect.top;
         const clampedSafeHeight = Math.max(0, Math.min(safeVisibleHeight, imgHeight));
         
         const targetScroll = screen.scrollHeight - screen.clientHeight;
@@ -365,11 +345,9 @@ async function fastRenderImage(src, altText = "IMAGE", extraClasses = "") {
         img.classList.add('loaded');
 
         if (maxScrollDistance > 0) {
-            // 30步 * 20ms = 600ms (高帧率同步)
             const steps = 30;
             for (let i = 1; i <= steps; i++) {
                 const currentScanY = imgHeight * (i / steps);
-                // 越过缓冲边界才推纸
                 if (currentScanY > clampedSafeHeight) {
                     let pushDown = currentScanY - clampedSafeHeight;
                     screen.scrollTop = startScroll + Math.min(pushDown, maxScrollDistance);
@@ -384,7 +362,6 @@ async function fastRenderImage(src, altText = "IMAGE", extraClasses = "") {
 
     } catch (e) { await typeError(`>> [LOAD FAIL]`); }
 }
-
 
 async function fastRenderCodeBox(filename, codeLines) {
     const panel = document.createElement('div');
@@ -418,7 +395,7 @@ async function fastRenderCodeBox(filename, codeLines) {
         
         if (codeLines.indexOf(line) % 2 === 0) {
             scrollToBottom();
-			await sleep(15);
+            await sleep(15);
             await new Promise(r => setTimeout(r, 0)); 
         }
     }
@@ -481,20 +458,15 @@ async function fastRenderContent(contentString) {
     }
 
     await sleep(200);
-	await typeDebug("\n>> [STREAM COMPLETE. SYSTEMS STABILIZED.]", 5);
+    await typeDebug("\n>> [STREAM COMPLETE. SYSTEMS STABILIZED.]", 5);
 
     const hasMath = contentString.includes('$') || contentString.includes('$$');
     if (hasMath && window.MathJax && typeof window.MathJax.typeset === 'function') {
         await typeText(">> RENDERING MATH EQUATIONS...", 5);
-
         try {
-            // 清空旧 DOM 缓存
             window.MathJax.typesetClear([outputDiv]);
-            
             window.MathJax.typeset([outputDiv]);
-
             await typeText(">> MATH ENGINE: [DONE]", 2, 'crt-blue');
-            
         } catch (err) {
             if (typeof window.MathJax.typesetPromise === 'function') {
                 window.MathJax.typesetPromise([outputDiv]).catch(e => console.warn("MathJax Async:", e));
@@ -509,7 +481,6 @@ async function fastRenderContent(contentString) {
     await typeText("Press [ENTER] to return...", 5);
     waitForEnter();
 }
-
 
 function renderMenuFromData(title, menuItems, animate = false) {
     state.mode = 'MENU';
@@ -556,7 +527,6 @@ function updateMenuVisuals() {
     });
 }
 
-// [修复点 1] 路由控制：子菜单和返回也都加上 true 以触发动画
 async function handleSelection(option) {
     const titleEl = document.querySelector('.menu-container div:first-child');
     const currentTitle = titleEl ? titleEl.textContent : "MAIN MENU"; 
@@ -567,7 +537,6 @@ async function handleSelection(option) {
             title: currentTitle, 
             items: currentItems 
         });
-        // 进入子菜单也淡入
         renderMenuFromData(`SUBMENU // ${option.label}`, option.items, true);
     } 
     else if (option.type === 'file') {
@@ -584,7 +553,6 @@ async function handleSelection(option) {
     else if (option.type === 'back') {
         const parent = state.menuStack.pop();
         if (parent) {
-            // 返回上级也淡入
             renderMenuFromData(parent.title, parent.items, true);
         } else {
             renderMenuFromData("MAIN MENU // DOMD-TOOLKIT", fileSystem.root, true);
@@ -596,7 +564,6 @@ async function handleSelection(option) {
     }
 }
 
-// [修复点 1] 确认阅读完毕后，呼出菜单加上 true 触发动画
 function waitForEnter() {
     state.mode = 'WAIT';
     const handler = (e) => {
@@ -615,7 +582,6 @@ function waitForEnter() {
     document.addEventListener('click', handler); 
 }
 
-// --- [修复点 2] 抽离核心：将展示通知信息的逻辑独立出来 ---
 async function displaySystemHeader() {
     if (!fileSystem || !fileSystem.sys) return;
 
@@ -631,27 +597,21 @@ async function displaySystemHeader() {
         await typeText("----------------------------------------", 0);
         for (const news of newsList) {
             await typeTextHTML(` * ${news}`, 5); 
-            await sleep(50); // 这里速度可以快一点，不需要像第一次开机那么慢
+            await sleep(50);
         }
         await typeText("----------------------------------------", 0);
         await sleep(300);
     }
 }
 
-// --- 功能函数 ---
-
 async function clearTerminal() {
     state.mode = 'BUSY';
     interactiveDiv.innerHTML = '';
     
-    // 直接清空大屏幕，干净利落
     outputDiv.innerHTML = ''; 
     state.menuStack = []; 
     
-    // [修复点 2] 重新把顶部的通知栏打出来
     await displaySystemHeader();
-
-    // 重新呼出菜单（带动画）
     renderMenuFromData("MAIN MENU // DOMD-TOOLKIT", fileSystem.root, true);
 }
 
@@ -677,8 +637,6 @@ document.addEventListener('keydown', (e) => {
     else if (e.key === 'Enter') { e.preventDefault(); document.getElementById(`menu-${state.menuIndex}`).click(); }
 });
 
-// --- 启动序列 ---
-
 async function bootSequence() {
     state.isBooting = true;
     
@@ -688,7 +646,7 @@ async function bootSequence() {
 
     try {
         await typeText(">> FETCHING DATA ...", 5);
-        const response = await fetch('/contents/data.json'); 
+        const response = await fetch(CONFIG.DATA_URL); 
         if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
         fileSystem = await response.json();
         await sleep(300);
@@ -708,7 +666,6 @@ async function bootSequence() {
     if (staticHeader) staticHeader.style.opacity = '1';
     await sleep(500);
 
-    // [修复点 2] 调用抽离出来的展示通知函数
     await displaySystemHeader();
 
     state.isBooting = false;
