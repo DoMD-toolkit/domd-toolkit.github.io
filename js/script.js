@@ -438,14 +438,32 @@ async function fastRenderContent(contentString) {
     }
 
     await sleep(200);
-    await typeDebug("\n>> [STREAM COMPLETE. SYSTEMS STABILIZED.]", 5);
-	if (window.MathJax) {
-        await typeText("Rendering Math equations... [Done]", 5);
+	await typeDebug("\n>> [STREAM COMPLETE. SYSTEMS STABILIZED.]", 5);
+
+    const hasMath = contentString.includes('$') || contentString.includes('$$');
+    if (hasMath && window.MathJax && typeof window.MathJax.typeset === 'function') {
+        await typeText(">> RENDERING MATH EQUATIONS...", 5);
+
+        try {
+            // 清空旧 DOM 缓存
+            window.MathJax.typesetClear([outputDiv]);
+            
+            window.MathJax.typeset([outputDiv]);
+
+            await typeText(">> MATH ENGINE: [DONE]", 2, 'crt-blue');
+            
+        } catch (err) {
+            if (typeof window.MathJax.typesetPromise === 'function') {
+                window.MathJax.typesetPromise([outputDiv]).catch(e => console.warn("MathJax Async:", e));
+                await sleep(100);
+                await typeText(">> MATH ENGINE: [ASYNC DONE]", 2, 'crt-amber');
+            } else {
+                await typeError(`[MATH ERROR] ${err.message}`);
+            }
+        }
     }
+
     await typeText("Press [ENTER] to return...", 5);
-	if (window.MathJax) {
-        await MathJax.typesetPromise([outputDiv]);
-    }
     waitForEnter();
 }
 
