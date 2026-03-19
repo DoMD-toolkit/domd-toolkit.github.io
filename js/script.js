@@ -594,12 +594,12 @@ async function displaySystemHeader() {
     if (newsList && newsList.length > 0) {
         await typeText(">> CHECKING SYSTEM NOTICES...", 5);
         await sleep(200);
-        await typeText("----------------------------------------", 0);
+        await typeText("--------------------------------------------------", 0);
         for (const news of newsList) {
             await typeTextHTML(` * ${news}`, 5); 
             await sleep(50);
         }
-        await typeText("----------------------------------------", 0);
+        await typeText("--------------------------------------------------", 0);
         await sleep(300);
     }
 }
