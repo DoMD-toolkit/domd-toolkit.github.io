@@ -112,6 +112,9 @@ function preloadImage(src, timeout = 10000) {
     });
 }
 
+const CRT_SCROLL_PADDING = 40; 
+
+// --- [修复版] 常规图片渲染：扫描线咬合 + 提前缓冲推纸 ---
 async function renderImage(src, altText = "IMAGE", extraClasses = "") {
     await typeText(`>> DOWNLOADING: ${altText}...`, 5);
     try {
@@ -124,36 +127,47 @@ async function renderImage(src, altText = "IMAGE", extraClasses = "") {
         container.appendChild(img);
 
         const screen = document.querySelector('.screen');
-        
-        // 1. 【核心魔法】在插入图片前，记录下当前的滚动条位置
         const startScroll = screen.scrollTop;
 
-        // 2. 插入图片，此时 DOM 会瞬间撑开几百像素的空间
         outputDiv.appendChild(container);
-        void img.offsetWidth; // 强制浏览器重绘
+        void img.offsetWidth; // 强制重绘，获取真实物理数据
 
-        // 3. 计算插入图片后，到底产生了多少“新”的滚动距离
+        // 获取物理数据
+        const rect = img.getBoundingClientRect();
+        const screenRect = screen.getBoundingClientRect();
+        const imgHeight = img.offsetHeight;
+
+        // 【核心物理引擎 2.0】引入预留缓冲检测
+        // 计算如果不滚动，图片有多少像素是在“安全可见区域”（即屏幕底部减去缓冲区）之内的
+        let safeVisibleHeight = (screenRect.bottom - CRT_SCROLL_PADDING) - rect.top;
+        // 将这个高度限制在 0 到 图片真实高度 之间
+        const clampedSafeHeight = Math.max(0, Math.min(safeVisibleHeight, imgHeight));
+
         const targetScroll = screen.scrollHeight - screen.clientHeight;
-        const scrollDistance = targetScroll - startScroll;
+        const maxScrollDistance = targetScroll - startScroll;
 
-        // 启动 CSS 扫描动画 (3秒)
-        img.classList.add('loaded'); 
+        img.classList.add('loaded'); // 启动 3s 的匀速线性扫描
 
-        // 4. 接管马达：只有当确实需要往下滚时，才开启“齿轮步进”
-        if (scrollDistance > 0) {
-            const steps = 40; // 30步 * 100ms = 3000ms (完美契合 CSS 的 3s)
+        if (maxScrollDistance > 0) {
+            const steps = 25; // 30步 * 100ms = 3000ms
             for (let i = 1; i <= steps; i++) {
-                // 将总距离切成 30 份，一点一点硬推下去
-                screen.scrollTop = startScroll + (scrollDistance * (i / steps));
-                await sleep(25); 
+                // 计算当前扫描线所在的 Y 轴坐标
+                const currentScanY = imgHeight * (i / steps);
+                
+                // 【物理碰撞触发】如果扫描线还在“安全可见区域”内，绝对不滚！
+                // 只有当扫描线越过了安全边界（距离屏幕底部 CRT_SCROLL_PADDING 像素时），才开始往下推纸！
+                if (currentScanY > clampedSafeHeight) {
+                    let pushDown = currentScanY - clampedSafeHeight;
+                    // 确保推纸距离不会超过最大可滚动距离
+                    screen.scrollTop = startScroll + Math.min(pushDown, maxScrollDistance);
+                }
+                await sleep(40); 
             }
         } else {
-            // 如果屏幕还没满，不需要滚动，就干等 3 秒让动画播完
             await sleep(1000); 
         }
 
-        // 确保最终严丝合缝锁定在底部
-        scrollToBottom();
+        scrollToBottom(); // 确保最终严丝合缝锁定在底部
 
     } catch (error) {
         const errDiv = document.createElement('div');
@@ -162,6 +176,8 @@ async function renderImage(src, altText = "IMAGE", extraClasses = "") {
         outputDiv.appendChild(errDiv);
     }
 }
+
+
 function parsePythonLine(line) {
     const tokens = [];
     if (line.trim().startsWith('#')) return [{ text: line, type: 'comment' }];
@@ -314,6 +330,7 @@ async function fastTypeTextHTML(htmlContent) {
     await transfer(tempDiv, lineDiv);
 }
 
+// --- [修复版] 极速图片渲染：爆发模式下的缓冲同步 ---
 async function fastRenderImage(src, altText = "IMAGE", extraClasses = "") {
     await typeText(`>> FAST-LOAD: ${altText}`, 2); 
     try {
@@ -324,8 +341,7 @@ async function fastRenderImage(src, altText = "IMAGE", extraClasses = "") {
         img.src = src;
         img.className = 'scan-effect';
         
-        // 【核心修复 1】抛弃现代缓动动画，强制使用绝对匀速 (linear)
-        // 让图片出现的节奏和老式扫描仪一样冷酷无情
+        // 爆发模式：0.6s linear
         img.style.transition = "clip-path 0.6s linear";
         container.appendChild(img);
         
@@ -333,20 +349,31 @@ async function fastRenderImage(src, altText = "IMAGE", extraClasses = "") {
         const startScroll = screen.scrollTop;
         
         outputDiv.appendChild(container);
-        void img.offsetWidth; // 触发重绘
+        void img.offsetWidth;
+        
+        const rect = img.getBoundingClientRect();
+        const screenRect = screen.getBoundingClientRect();
+        const imgHeight = img.offsetHeight;
+
+        // 同步引入缓冲检测
+        let safeVisibleHeight = (screenRect.bottom - CRT_SCROLL_PADDING) - rect.top;
+        const clampedSafeHeight = Math.max(0, Math.min(safeVisibleHeight, imgHeight));
         
         const targetScroll = screen.scrollHeight - screen.clientHeight;
-        const scrollDistance = targetScroll - startScroll;
+        const maxScrollDistance = targetScroll - startScroll;
          
         img.classList.add('loaded');
 
-        if (scrollDistance > 0) {
-            // 【核心修复 2】提高马达的刷新率！
-            // 把总时间 600ms 切成 30 份，每份 20ms (接近 50fps 的丝滑度)
-            // 这样滚动会紧紧咬住那条匀速的扫描线
+        if (maxScrollDistance > 0) {
+            // 30步 * 20ms = 600ms (高帧率同步)
             const steps = 30;
             for (let i = 1; i <= steps; i++) {
-                screen.scrollTop = startScroll + (scrollDistance * (i / steps));
+                const currentScanY = imgHeight * (i / steps);
+                // 越过缓冲边界才推纸
+                if (currentScanY > clampedSafeHeight) {
+                    let pushDown = currentScanY - clampedSafeHeight;
+                    screen.scrollTop = startScroll + Math.min(pushDown, maxScrollDistance);
+                }
                 await sleep(20); 
             }
         } else {
@@ -355,7 +382,7 @@ async function fastRenderImage(src, altText = "IMAGE", extraClasses = "") {
 
         scrollToBottom();
 
-    } catch (e) { await typeError(`[LOAD FAIL]`); }
+    } catch (e) { await typeError(`>> [LOAD FAIL]`); }
 }
 
 
