@@ -5,6 +5,53 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>DoMD-Toolkit</title>
     <link rel="stylesheet" href="/css/style.css">
+	<script>
+		window.MathJax = {
+		  tex: {
+			inlineMath: [['$', '$'], ['\\(', '\\)']],
+			displayMath: [['$$', '$$'], ['\\[', '\\]']],
+			processEscapes: true // 允许使用 \$ 来转义美元符号
+		  },
+		  options: {
+			// 避开代码块，防止你的 Python 代码被意外解析成公式
+			skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code', 'span.token-string']
+		  },
+		  chtml: {
+			// 字体匹配复古感，不使用默认的巨大缩放
+			scale: 1.1,
+			displayAlign: 'left', // 终端里的公式一般靠左对齐比较硬核
+			displayIndent: '2em'
+		  }
+		};
+	</script>
+	<script id="MathJax-script" async src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.0.0/tex-chtml.min.js"></script>
+	<style>
+		/* =========================================
+		   MathJax CRT 荧光视觉穿透补丁
+		   ========================================= */
+		mjx-container {
+			color: var(--phosphor-main) !important;
+			text-shadow: 
+				0 0 1px var(--phosphor-main), 
+				0 0 6px var(--phosphor-dim),
+				0 0 12px rgba(0, 255, 65, 0.15) !important;
+			/* 让公式有一点点微弱的电流颤动感，融入整体环境 */
+			animation: flicker 0.1s infinite alternate;
+		}
+
+		/* 保证行内公式对齐舒适 */
+		mjx-container[jax="CHTML"][display="false"] {
+			display: inline-block;
+			margin: 0 4px;
+		}
+
+		/* 块级公式上下留点呼吸空间，左侧加上复古边框修饰 */
+		mjx-container[jax="CHTML"][display="true"] {
+			margin: 15px 0 !important;
+			padding-left: 15px;
+			border-left: 2px dashed var(--phosphor-dim);
+		}
+	</style>
 </head>
 <body>
 	<div class="crt-container">

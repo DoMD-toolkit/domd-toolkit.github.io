@@ -66,7 +66,7 @@
         {
           "label": "INSTALLATION",
           "type": "file",
-          "content": "[[IMG: https://www.domd.today/images/DoMD-logo.png | LOGO ]]\n\nTESTING NEW IMAGE MODES:\n\n1. Default (Left, Max 300px):\n[[IMG: https://placehold.co/400x200/000000/33ff33/png?text=DEFAULT | Default Mode ]]\n\n2. Wide Mode (Left, Max 600px):\n[[IMG: https://placehold.co/700x250/000000/33ff33/png?text=WIDE+MODE | Wide Mode | wide ]]\n\n3. Center Mode (Center, Max 300px):\n[[IMG: https://placehold.co/400x200/000000/33ff33/png?text=CENTERED | Center Mode | center ]]\n\n4. Wide + Center Mode:\n[[IMG: https://placehold.co/700x250/000000/33ff33/png?text=WIDE+AND+CENTERED | Wide Center | wide | center ]]\n\n[[CODE: chem.py]]\ndef run(): pass\n[[ENDCODE]]\n\n Code and image Examples",
+          "content": "[[IMG: https://www.domd.today/images/DoMD-logo.png | LOGO ]]\n\nlet me test inline math $E=mc^2$ and display math\n\n$$ E=mc^2$$\n\nTESTING NEW IMAGE MODES:\n\n1. Default (Left, Max 300px):\n[[IMG: https://placehold.co/400x200/000000/33ff33/png?text=DEFAULT | Default Mode ]]\n\n2. Wide Mode (Left, Max 600px):\n[[IMG: https://placehold.co/700x250/000000/33ff33/png?text=WIDE+MODE | Wide Mode | wide ]]\n\n3. Center Mode (Center, Max 300px):\n[[IMG: https://placehold.co/400x200/000000/33ff33/png?text=CENTERED | Center Mode | center ]]\n\n4. Wide + Center Mode:\n[[IMG: https://placehold.co/700x250/000000/33ff33/png?text=WIDE+AND+CENTERED | Wide Center | wide | center ]]\n\n[[CODE: chem.py]]\ndef run(): pass\n[[ENDCODE]]\n\n Code and image Examples",
           "mode": "fast"
         },
         {

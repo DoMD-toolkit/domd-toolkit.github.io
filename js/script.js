@@ -257,7 +257,13 @@ async function renderContent(contentString) {
         }
     }
     await typeText("\n>> [EOF]");
+	if (window.MathJax) {
+        await typeText("Rendering Math equations... [Done]", 5);
+    }
     await typeText("Press [ENTER] to return...");
+	if (window.MathJax) {
+        await MathJax.typesetPromise([outputDiv]);
+    }
     waitForEnter();
 }
 
@@ -433,7 +439,13 @@ async function fastRenderContent(contentString) {
 
     await sleep(200);
     await typeDebug("\n>> [STREAM COMPLETE. SYSTEMS STABILIZED.]", 5);
+	if (window.MathJax) {
+        await typeText("Rendering Math equations... [Done]", 5);
+    }
     await typeText("Press [ENTER] to return...", 5);
+	if (window.MathJax) {
+        await MathJax.typesetPromise([outputDiv]);
+    }
     waitForEnter();
 }
 
