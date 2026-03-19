@@ -119,7 +119,7 @@
         return d;
     }
 
-    async function fetchData() {	
+    async function fetchData() {
         try {
             const res = await fetch('/contents/data.json');
             db = await res.json();
@@ -131,14 +131,32 @@
     function renderAll() { if(!db) return; renderAbout(); renderNews(); renderTeam(); renderPubs(); renderHelp(); }
 
     function renderAbout() {
-        const node = findNode("ABOUT PROJECT");
+        const aboutNode = findNode("ABOUT PROJECT");
         document.getElementById('about-container').innerHTML = `
-            <div class="card"><div class="card-header">PROJECT_METADATA</div>
-            <div class="card-body">
-                <label class="label-text">PROJECT_LABEL</label><input type="text" class="form-control mb-3 fw-bold" value="${node.label}" id="about-label">
-                <label class="label-text">DESCRIPTION (AUTO-FORMATTED)</label>
-                <textarea class="form-control" rows="15" id="about-content">${prettyPrintHTMLLists(node.content)}</textarea>
-            </div></div>`;
+            ${aboutNode.items.map((item, i) => `
+                <div class="card mb-3">
+                    <div class="card-header">
+                        ITEM: ${item.label}
+                        <button class="btn btn-del" onclick="syncAll(); removeAbout(${i})">REMOVE</button>
+                    </div>
+                    <div class="card-body">
+                        <div class="d-flex gap-2 mb-2">
+                            <div class="flex-grow-1">
+                                <label class="label-text">LABEL</label>
+                                <input type="text" class="form-control fw-bold" value="${item.label}" id="about-${i}-label">
+                            </div>
+                            <div style="width: 150px;">
+                                <label class="label-text">MODE</label>
+                                <input type="text" class="form-control" value="${item.mode || ''}" id="about-${i}-mode">
+                            </div>
+                        </div>
+                        <label class="label-text">CONTENT (AUTO-FORMATTED)</label>
+                        <textarea class="form-control" rows="10" id="about-${i}-content">${prettyPrintHTMLLists(item.content)}</textarea>
+                    </div>
+                </div>
+            `).join('')}
+            <button class="btn btn-crt btn-blue mt-2" onclick="syncAll(); addAbout()">+ ADD_ABOUT_ITEM</button>
+        `;
     }
 
     function renderNews() {
@@ -184,27 +202,65 @@
     }
 
     function renderHelp() {
-        const help = findNode("HELP"); const inst = help.items.find(x => x.label === "INSTALLATION"); const tuts = help.items.find(x => x.label === "TOTURIALs");
+        const help = findNode("HELP"); 
+        const inst = help.items.find(x => x.label === "INSTALLATION"); 
+        const tuts = help.items.find(x => x.label === "TOTURIALs");
+        
+        let instHtml = inst.items.map((item, i) => `
+            <div class="help-item">
+                <div class="d-flex gap-2 mb-2">
+                    <input type="text" class="form-control fw-bold" value="${item.label}" id="inst-${i}-label">
+                    <button class="btn btn-del" onclick="syncAll(); removeInst(${i})">REMOVE</button>
+                </div>
+                <textarea class="form-control" rows="6" id="inst-${i}-content">${prettyPrintHTMLLists(item.content)}</textarea>
+            </div>
+        `).join('');
+
+        let tutHtml = tuts.items.map((t, i) => `
+            <div class="help-item">
+                <div class="d-flex gap-2 mb-2">
+                    <input type="text" class="form-control fw-bold" value="${t.label}" id="tut-${i}-label">
+                    <button class="btn btn-del" onclick="syncAll(); removeTut(${i})">REMOVE</button>
+                </div>
+                <textarea class="form-control" rows="4" id="tut-${i}-content">${prettyPrintHTMLLists(t.content)}</textarea>
+            </div>
+        `).join('');
+
         document.getElementById('help-container').innerHTML = `
-            <div class="card"><div class="card-header">INSTALLATION</div><div class="card-body"><textarea class="form-control" rows="8" id="help-inst-content">${prettyPrintHTMLLists(inst.content)}</textarea></div></div>
-            <div class="card"><div class="card-header">TUTORIALS</div><div class="card-body"><div id="help-tut-list">
-                ${tuts.items.map((t, i) => `<div class="help-item"><div class="d-flex gap-2 mb-2"><input type="text" class="form-control fw-bold" value="${t.label}" id="tut-${i}-label">
-                <button class="btn btn-del" onclick="syncAll(); removeTut(${i})">REMOVE</button></div><textarea class="form-control" rows="4" id="tut-${i}-content">${prettyPrintHTMLLists(t.content)}</textarea></div>`).join('')}
-            </div><button class="btn btn-crt btn-blue mt-2" onclick="syncAll(); addTut()">+ ADD_EXAMPLE</button></div></div>`;
+            <div class="card">
+                <div class="card-header">INSTALLATION</div>
+                <div class="card-body">
+                    <div id="help-inst-list">${instHtml}</div>
+                    <button class="btn btn-crt btn-blue mt-2" onclick="syncAll(); addInst()">+ ADD_INSTALL_ITEM</button>
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-header">TUTORIALS</div>
+                <div class="card-body">
+                    <div id="help-tut-list">${tutHtml}</div>
+                    <button class="btn btn-crt btn-blue mt-2" onclick="syncAll(); addTut()">+ ADD_EXAMPLE</button>
+                </div>
+            </div>`;
     }
 
     function syncAll() {
         if(!db) return;
-        // News format
+        
+        // News format (为了兼容你旧的数据，仍然保留自动添加 span 的修正逻辑，但我们移除了前缀判断以避免老旧浏览器不支持正则断言)
         db.sys.news = db.sys.news.map((_, i) => {
             let val = document.getElementById(`news-${i}`).value;
-            return val.replace(/(?<!crt-amber'>)\[(\d{4}-\d{2}-\d{2})\]/g, "<span class='crt-amber'>[$1]</span>");
+            // 清理掉原有的span避免重复包裹，然后再统一包裹
+            let cleanVal = val.replace(/<span class='crt-amber'>\[(\d{4}-\d{2}-\d{2})\]<\/span>/g, "[$1]");
+            return cleanVal.replace(/\[(\d{4}-\d{2}-\d{2})\]/g, "<span class='crt-amber'>[$1]</span>");
         });
 
-        // About format
-        const about = findNode("ABOUT PROJECT");
-        about.label = document.getElementById('about-label').value;
-        about.content = minifyHTMLLists(document.getElementById('about-content').value);
+        // About Sync
+        const aboutNode = findNode("ABOUT PROJECT");
+        aboutNode.items.forEach((item, i) => {
+            item.label = document.getElementById(`about-${i}-label`).value;
+            item.mode = document.getElementById(`about-${i}-mode`).value;
+            item.content = minifyHTMLLists(document.getElementById(`about-${i}-content`).value);
+        });
 
         // Team Sync
         findNode("TEAM & CVs").items.forEach((m, i) => {
@@ -222,13 +278,29 @@
 
         // Help Sync
         const help = findNode("HELP"); 
-        help.items.find(x => x.label === "INSTALLATION").content = minifyHTMLLists(document.getElementById('help-inst-content').value);
+        help.items.find(x => x.label === "INSTALLATION").items.forEach((item, i) => {
+            item.label = document.getElementById(`inst-${i}-label`).value;
+            item.content = minifyHTMLLists(document.getElementById(`inst-${i}-content`).value);
+        });
         help.items.find(x => x.label === "TOTURIALs").items.forEach((t, i) => { 
             t.label = document.getElementById(`tut-${i}-label`).value; 
             t.content = minifyHTMLLists(document.getElementById(`tut-${i}-content`).value); 
         });
     }
 
+    // -- 添加/删除 组件方法 --
+
+    function addAbout() { findNode("ABOUT PROJECT").items.push({label:"New Item", type:"file", mode:"fast", content:""}); renderAbout(); }
+    function removeAbout(i) { findNode("ABOUT PROJECT").items.splice(i, 1); renderAbout(); }
+
+    function addInst() { findNode("HELP").items.find(x => x.label === "INSTALLATION").items.push({label:"New Step", type:"file", content:""}); renderHelp(); }
+    function removeInst(i) { findNode("HELP").items.find(x => x.label === "INSTALLATION").items.splice(i, 1); renderHelp(); }
+
+    function addTut() { findNode("HELP").items.find(x => x.label === "TOTURIALs").items.push({label:"New Tutorial", type:"file", content:""}); renderHelp(); }
+    function removeTut(i) { findNode("HELP").items.find(x => x.label === "TOTURIALs").items.splice(i, 1); renderHelp(); }
+
+    function addNews() { db.sys.news.unshift(`<span class='crt-amber'>[${new Date().toISOString().split('T')[0]}]</span> NEW_EVENT`); renderNews(); }
+    
     function addPub(type, idx) {
         let node = type === 'team' ? findNode("TEAM & CVs").items[idx] : findNode("PUBLICATIONS").items[idx];
         let ps = parsePubContent(type === 'team' ? node.content.split("Publications:</span>")[1] : node.content);
@@ -245,13 +317,12 @@
         pre.startsWith('team') ? renderTeam() : renderPubs();
     }
     
-    function addTut() { findNode("HELP").items.find(x => x.label === "TOTURIALs").items.push({label:"New", type:"file", content:""}); renderHelp(); }
-    function removeTut(i) { findNode("HELP").items.find(x => x.label === "TOTURIALs").items.splice(i, 1); renderHelp(); }
-    function addNews() { db.sys.news.unshift(`[${new Date().toISOString().split('T')[0]}] NEW`); renderNews(); }
-    function addMember() { findNode("TEAM & CVs").items.push({label:"New", type:"file", content:"<span class='crt-blue'>NAME:</span> \n<span class='crt-blue'>ROLE:</span> \n[[IMG: # | PHOTO | small ]]\n<span class='crt-blue'>BIO:</span> \n<span class='crt-blue'>RESEARCH AREA:</span> \n<span class='crt-blue'>Email:</span> \n<span class='crt-blue'>Publications:</span>\n"}); renderTeam(); }
+    function addMember() { findNode("TEAM & CVs").items.push({label:"New Member", type:"file", content:"<span class='crt-blue'>NAME:</span> \n<span class='crt-blue'>ROLE:</span> \n[[IMG: # | PHOTO | small ]]\n<span class='crt-blue'>BIO:</span> \n<span class='crt-blue'>RESEARCH AREA:</span> \n<span class='crt-blue'>Email:</span> \n<span class='crt-blue'>Publications:</span>\n"}); renderTeam(); }
     function removeMember(i) { findNode("TEAM & CVs").items.splice(i, 1); renderTeam(); }
+    
     function addPubGroup() { findNode("PUBLICATIONS").items.push({label:"2026", type:"file", content:""}); renderPubs(); }
     function removePubGroup(i) { findNode("PUBLICATIONS").items.splice(i, 1); renderPubs(); }
+    
     function exportJSON() { syncAll(); const b = new Blob([JSON.stringify(db, null, 2)], {type: "application/json"}); const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = "data.json"; a.click(); }
 </script>
 

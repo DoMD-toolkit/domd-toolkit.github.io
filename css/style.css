@@ -340,4 +340,4 @@ body.shutdown-active .crt-container {
 .output-line li { position: relative; margin-bottom: 12px; line-height: 1.4; padding-left: 0.5rem; display: list-item; }
 .output-line ol li::before { content: "[" counter(list-item) "]"; display: inline-block; background-color: var(--phosphor-main); color: var(--terminal-bg); font-weight: bold; font-size: 0.9em; width: 2.2rem; text-align: center; margin-right: 12px; margin-left: -2.8rem; box-shadow: 0 0 8px var(--phosphor-main); border-radius: 2px; }
 .output-line ul li::before { content: "■"; display: inline-block; color: var(--phosphor-main); width: 1rem; margin-right: 12px; margin-left: -1.6rem; text-shadow: 0 0 5px var(--phosphor-main); }
-.output-line li:hover::before { filter: brightness(1.3); animation: blink 0.5s step-end infinite; }
+.output-line li:hover::before { filter: brightness(1.3); animation: blink 1s step-end infinite; }
