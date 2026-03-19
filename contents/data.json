@@ -2,9 +2,10 @@
   "sys": {
     "boot_msg": "CONNECTING TO REMOTE DATA NODE...",
     "news": [
+      "<span class='crt-amber'>[2026-03-19]</span> MathJax is supported",
       "<span class='crt-amber'>[2026-02-10]</span> System upgraded to JSON architecture.",
-      "<span class='crt-amber'>[2026-02-10]</span> New version online: https://github.com/DoMD-toolkit/DoMD",
-      "<span class='crt-amber'>[2026-02-10]</span> ChemFast 1.0.0 released: https://github.com/DoMD-toolkit/DoMD/releases/tag/v1.0.0",
+      "<span class='crt-amber'>[2026-02-10]</span> New version online: DoMD-toolkit/DoMD",
+      "<span class='crt-amber'>[2026-02-10]</span> ChemFast 1.0.0 released: DoMD-toolkit/DoMD/releases/tag/v1.0.0",
       "NOTICE: Data is now fetched asynchronously."
     ]
   },
