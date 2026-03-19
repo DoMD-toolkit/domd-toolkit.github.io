@@ -96,40 +96,56 @@ body.shutdown-active .crt-container {
     box-shadow: none;
 }
 
-/* --- [关键修复 2] 屏幕遮罩层 (Vignette) --- */
+/* --- [精调光学引擎 1] 屏幕遮罩层 (Vignette) --- */
 .screen-overlay {
     position: absolute;
     top: 0; left: 0; width: 100%; height: 100%;
     z-index: 11;
     pointer-events: none;
-    /* 让正中心变为全透明 (transparent)，不要用灰色盖住文字！只在四周保留暗角 */
+    /* 采用更细腻的多级渐变：中心区域留出更大透亮区，只在最边缘迅速压暗，立体感倍增且不显得脏 */
     background: radial-gradient(
-        circle, 
-        transparent 50%, 
-        rgba(0, 0, 0, 0.2) 75%, 
-        rgba(0, 0, 0, 0.6) 100%
+        circle at 50% 50%, 
+        transparent 60%, 
+        rgba(0, 0, 0, 0.1) 75%, 
+        rgba(0, 0, 0, 0.4) 85%, 
+        rgba(0, 0, 0, 0.85) 100%
     );
     animation: pipBoyFlicker 0.1s infinite;
 }
 
-/* --- [修复] 扫描线：去掉正片叠底，恢复纯粹的透明遮罩 --- */
+/* --- [精调光学引擎 2] 扫描线 --- */
 .scanlines {
     position: absolute;
     top: 0; left: 0; width: 100%; height: 100%;
     z-index: 10;
     pointer-events: none;
-    /* 稍微调低扫描线的黑度，防止它把画面压暗 */
     background: linear-gradient(
         to bottom,
         rgba(0, 0, 0, 0) 50%,
         rgba(0, 0, 0, 0.15) 50% 
     );
     background-size: 100% 4px;
-    /* 【关键删除】：删掉了 mix-blend-mode: multiply; 不再让它污染底层颜色 */
+    
+    /* [新增] 遮罩渐隐：让扫描线在最上面和最下面悄悄变淡，消除一刀切的平直感，自带一点垂直弧度错觉 */
+    -webkit-mask-image: linear-gradient(
+        to bottom,
+        rgba(0, 0, 0, 0.2) 0%,
+        rgba(0, 0, 0, 1) 10%,
+        rgba(0, 0, 0, 1) 90%,
+        rgba(0, 0, 0, 0.2) 100%
+    );
+    mask-image: linear-gradient(
+        to bottom,
+        rgba(0, 0, 0, 0.2) 0%,
+        rgba(0, 0, 0, 1) 10%,
+        rgba(0, 0, 0, 1) 90%,
+        rgba(0, 0, 0, 0.2) 100%
+    );
+    
     animation: scrollScanlines 8s linear infinite;
 }
 
-/* --- [修复] 内容层：剥离白色高光，恢复 100% 纯粹的毒性荧光绿 --- */
+/* --- [保持] 内容层 --- */
 .screen {
     position: relative; 
     z-index: 1; 
@@ -139,10 +155,7 @@ body.shutdown-active .crt-container {
     box-sizing: border-box;
     overflow-y: auto; 
     
-    /* 【关键修改】：回归最纯正的 Matrix Green */
     color: var(--phosphor-main); 
-    
-    /* 【关键修改】：去掉了所有带白色的发光层，只用绿色叠加，保证色彩饱和度爆表 */
     text-shadow: 
         0 0 1px var(--phosphor-main), 
         0 0 6px var(--phosphor-dim),
@@ -191,7 +204,6 @@ body.shutdown-active .crt-container {
     transition: all 0.1s cubic-bezier(0.25, 0.46, 0.45, 0.94);
 }
 
-/* Hover 状态：高压霓虹激活动画 */
 .hardware-logo:hover {
     color: #ffffff;
     border-color: var(--phosphor-main);
@@ -205,7 +217,6 @@ body.shutdown-active .crt-container {
     animation: neonJitterBleed 0.12s infinite; 
 }
 
-/* 模拟霓虹灯管的高频抖动、光晕外溢的电流感 */
 @keyframes neonJitterBleed {
     0% {
         text-shadow: 
@@ -320,6 +331,27 @@ backface-visibility: hidden;
 @keyframes scrollScanlines { from { background-position: 0 0; } to { background-position: 0 100%; } }
 @keyframes turn-off { 0% { transform: scale(1, 1) skew(0deg); filter: brightness(1); opacity: 1; } 40% { transform: scale(1, 0.002) skew(10deg); filter: brightness(5); opacity: 1; } 60% { transform: scale(0.01, 0.002) skew(0deg); filter: brightness(5); opacity: 1; } 100% { transform: scale(0, 0); filter: brightness(0); opacity: 0; } }
 .cursor { display: inline-block; width: 10px; height: 1.2em; background-color: var(--phosphor-main); animation: blink 1s step-end infinite; vertical-align: middle; }
+
+/* =========================================
+   MATHJAX 复古补丁 (确保公式样式不会丢失)
+   ========================================= */
+mjx-container {
+    color: var(--phosphor-main) !important;
+    text-shadow: 
+        0 0 1px var(--phosphor-main), 
+        0 0 6px var(--phosphor-dim),
+        0 0 12px rgba(0, 255, 65, 0.15) !important;
+    animation: flicker 0.1s infinite alternate;
+}
+mjx-container[jax="CHTML"][display="false"] {
+    display: inline-block;
+    margin: 0 4px;
+}
+mjx-container[jax="CHTML"][display="true"] {
+    margin: 15px 0 !important;
+    padding-left: 15px;
+    border-left: 2px dashed var(--phosphor-dim);
+}
 
 /* =========================================
    CRT 复古调色盘
