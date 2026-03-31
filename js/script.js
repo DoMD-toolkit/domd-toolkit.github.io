@@ -13,7 +13,7 @@ const CONFIG = {
             HTML_DELAY: 8,       // HTML文本打字延迟(ms)
             HTML_STEP: 1,        // HTML文本每次输出字符数
 			LINE_DELAY: 220,     // 模拟物理打字机换行时的停顿(ms)
-            IMG_SCAN_SPEED: 220, // 图片扫描速度 (像素/秒)
+            IMG_SCAN_SPEED: 240, // 图片扫描速度 (像素/秒)
             IMG_MIN_TIME: 0.8,   // 图片最少扫描时间(秒)
             CODE_CHAR: 5,        // 代码逐字延迟(ms)
             CODE_LINE: 10,       // 代码逐行延迟(ms)
