@@ -350,15 +350,6 @@ mjx-container[display="true"] {
     border-left: 2px dashed var(--phosphor-dim);
 }
 
-mjx-container svg {
-    overflow: visible !important;
-}
-
-mjx-container[jax="SVG"][display="false"] {
-    padding-top: 1px !important;
-    padding-bottom: 1px !important;
-}
-
 
 /* =========================================
    CRT 复古调色盘
