@@ -333,7 +333,7 @@ backface-visibility: hidden;
 .cursor { display: inline-block; width: 10px; height: 1.2em; background-color: var(--phosphor-main); animation: blink 1s step-end infinite; vertical-align: middle; }
 
 /* =========================================
-   MATHJAX 复古补丁 (确保公式样式不会丢失)
+   MATHJAX 复古补丁 (确保公式样式不会丢失且不被裁切)
    ========================================= */
 mjx-container {
     color: var(--phosphor-main) !important;
@@ -343,15 +343,22 @@ mjx-container {
         0 0 12px rgba(0, 255, 65, 0.15) !important;
     animation: flicker 0.1s infinite alternate;
 }
-mjx-container[jax="CHTML"][display="false"] {
-    display: inline-block;
-    margin: 0 4px;
-}
-mjx-container[jax="CHTML"][display="true"] {
+
+mjx-container[display="true"] {
     margin: 15px 0 !important;
-    padding-left: 15px;
+    padding-left: 15px !important;
     border-left: 2px dashed var(--phosphor-dim);
 }
+
+mjx-container svg {
+    overflow: visible !important;
+}
+
+mjx-container[jax="SVG"][display="false"] {
+    padding-top: 1px !important;
+    padding-bottom: 1px !important;
+}
+
 
 /* =========================================
    CRT 复古调色盘

@@ -7,23 +7,27 @@
     <link rel="stylesheet" href="/css/style.css">
 	<script>
 		window.MathJax = {
-		  tex: {
-			inlineMath: [['$', '$'], ['\\(', '\\)']],
-			displayMath: [['$$', '$$'], ['\\[', '\\]']],
-			processEscapes: true // allow \$
-		  },
-		  options: {
-			skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code', 'span.token-string'],
-			ignoreHtmlClass: 'code-panel|code-header|code-body'
-		  },
-		  chtml: {
-			scale: 1.1,
-			displayAlign: 'left',
-			displayIndent: '2em'
-		  }
+			tex: {
+				inlineMath: [['$', '$'], ['\\(', '\\)']],
+				displayMath: [['$$', '$$'], ['\\[', '\\]']],
+				processEscapes: true // allow \$
+			},
+			options: {
+				skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code', 'span.token-string'],
+				ignoreHtmlClass: 'code-panel|code-header|code-body'
+			},
+			svg: {
+				scale: 1.1,
+				displayAlign: 'left',
+				displayIndent: '2em',
+				fontCache: 'global'
+			},
+			startup: {
+				typeset: false 
+			}
 		};
 	</script>
-	<script id="MathJax-script" async src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.0.0/tex-chtml.min.js"></script>
+	<script id="MathJax-script" async src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.0.0/tex-svg-nofont.min.js"></script>
 </head>
 <body>
 	<div class="crt-container">
