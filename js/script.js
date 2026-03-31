@@ -3,24 +3,55 @@
 // =============================================================================
 
 const CONFIG = {
-    DATA_URL: '/contents/data.json',  // 系统的虚拟数据源路径
-    CRT_SCROLL_PADDING: 40            // 模拟物理推纸时，预留的底部安全缓冲高度 (像素)
+    DATA_URL: '/contents/data.json',  
+    CRT_SCROLL_PADDING: 40,
+    // 统一管理渲染速度配置
+    SPEED: {
+        NORMAL: {
+            TEXT_DELAY: 8,       // 普通文本打字延迟(ms)
+            TEXT_STEP: 1,        // 普通文本每次输出字符数
+            HTML_DELAY: 8,       // HTML文本打字延迟(ms)
+            HTML_STEP: 1,        // HTML文本每次输出字符数
+			LINE_DELAY: 220,     // 模拟物理打字机换行时的停顿(ms)
+            IMG_SCAN_SPEED: 220, // 图片扫描速度 (像素/秒)
+            IMG_MIN_TIME: 0.8,   // 图片最少扫描时间(秒)
+            CODE_CHAR: 5,        // 代码逐字延迟(ms)
+            CODE_LINE: 10,       // 代码逐行延迟(ms)
+            PAUSE_MULT: 1        // [[PAUSE:xx]] 指令的时间倍率
+        },
+        FAST: {
+            TEXT_DELAY: 0,
+            TEXT_STEP: 8,
+            HTML_DELAY: 0,
+            HTML_STEP: 8,
+			LINE_DELAY: 0,       // <--- 快速模式无需换行停顿
+            IMG_SCAN_SPEED: 600,
+            IMG_MIN_TIME: 0.4,
+            CODE_CHAR: 0,
+            CODE_LINE: 0,
+            PAUSE_MULT: 0.25
+        }
+    }
 };
 
-let fileSystem = null;                // 存储从远程获取的系统文件数据树
+let fileSystem = null;
 
 let state = {
-    isBooting: true,                  // 标识系统是否正处于开机引导序列
-    mode: 'NONE',                     // 终端当前工作模式 (NONE, WAIT, MENU, RenderContent, BUSY, SHUTDOWN)
-    menuIndex: 0,                     // 菜单中当前被光标选中的项目索引
-    currentMenuOptions: [],           // 当前活动菜单层级的渲染数据集
-    menuStack: [],                    // 菜单历史记录栈 (用于支持多级子菜单的后退功能)
-    lastMenuContext: null             // 记忆最后一次所在的菜单上下文 (用于阅读内容后返回)
+    isBooting: true,
+    mode: 'NONE',
+    speedMode: 'NORMAL',              // 新增：当前系统的运行速度模式
+    menuIndex: 0,
+    currentMenuOptions: [],
+    menuStack: [],
+    lastMenuContext: null
 };
 
 const outputDiv = document.getElementById('terminal-output');
 const interactiveDiv = document.getElementById('interactive-area');
 const globalCursor = document.getElementById('global-cursor');
+
+// 获取当前速度配置的快捷方法
+const getSpeed = () => CONFIG.SPEED[state.speedMode];
 
 // =============================================================================
 //  CORE ENGINE (核心渲染引擎)
@@ -30,17 +61,19 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
 
 function scrollToBottom() {
     const screen = document.querySelector('.screen');
-    screen.scrollTop = screen.scrollHeight;
+    if (screen) screen.scrollTop = screen.scrollHeight;
 }
 
-async function typeText(text, delay = 8, className = '') {
+async function typeText(text, customDelay = null, className = '') {
     if (!text) return;
     const lineDiv = document.createElement('div');
     lineDiv.className = `output-line ${className}`;
     outputDiv.appendChild(lineDiv);
 
+    const speed = getSpeed();
+    const delay = customDelay !== null ? customDelay : speed.TEXT_DELAY;
+    const step = speed.TEXT_STEP;
     let i = 0;
-    const step = 2; 
     
     while (i < text.length) {
         const chunk = text.substring(i, i + step);
@@ -49,28 +82,33 @@ async function typeText(text, delay = 8, className = '') {
         
         scrollToBottom();
         
-        const isEnd = /[.!?。！？]/.test(chunk);
-        await sleep(isEnd ? delay * 3 : delay);
+        if (delay > 0) {
+            const isEnd = /[.!?。！？]/.test(chunk);
+            await sleep(isEnd ? delay * 3 : delay);
+        } else {
+            await new Promise(r => setTimeout(r, 0));
+        }
+    }
+
+    if (speed.LINE_DELAY > 0) {
+        await sleep(speed.LINE_DELAY);
     }
 }
 
-async function typeError(text) {
-    await typeText(text, 30, 'text-error');
-}
+async function typeError(text) { await typeText(text, 30, 'text-error'); }
+async function typeDebug(text) { await typeText(text, 10, 'text-debug'); }
 
-async function typeDebug(text) {
-    await typeText(text, 10, 'text-debug');
-}
-
-async function typeTextHTML(htmlContent, delay = 8) {
+async function typeTextHTML(htmlContent) {
     const lineDiv = document.createElement('div');
     lineDiv.className = 'output-line';
     outputDiv.appendChild(lineDiv);
 
     const tempDiv = document.createElement('div');
     tempDiv.innerHTML = htmlContent;
+    const speed = getSpeed();
 
     async function transferNodes(source, target) {
+        // ... (保持你现有的 transferNodes 内部逻辑不变) ...
         const nodes = Array.from(source.childNodes);
         for (const node of nodes) {
             if (node.nodeType === Node.TEXT_NODE) {
@@ -78,20 +116,21 @@ async function typeTextHTML(htmlContent, delay = 8) {
                 target.appendChild(textNode);
                 const text = node.textContent;
                 let i = 0;
-                const step = 3; 
 
                 while (i < text.length) {
-                    textNode.textContent += text.substring(i, i + step);
-                    i += step;
+                    textNode.textContent += text.substring(i, i + speed.HTML_STEP);
+                    i += speed.HTML_STEP;
                     scrollToBottom();
-                    await sleep(delay);
+                    if (speed.HTML_DELAY > 0) {
+                        await sleep(speed.HTML_DELAY);
+                    } else {
+                        await new Promise(r => setTimeout(r, 0));
+                    }
                 }
             } 
             else if (node.nodeType === Node.ELEMENT_NODE) {
                 const newElement = document.createElement(node.tagName);
-                Array.from(node.attributes).forEach(attr => {
-                    newElement.setAttribute(attr.name, attr.value);
-                });
+                Array.from(node.attributes).forEach(attr => newElement.setAttribute(attr.name, attr.value));
                 target.appendChild(newElement);
                 await transferNodes(node, newElement);
             }
@@ -99,7 +138,11 @@ async function typeTextHTML(htmlContent, delay = 8) {
     }
 
     await transferNodes(tempDiv, lineDiv);
-    await sleep(20); 
+    
+    if (speed.HTML_DELAY > 0) await sleep(20); 
+    if (speed.LINE_DELAY > 0) {
+        await sleep(speed.LINE_DELAY);
+    }
 }
 
 function preloadImage(src, timeout = 10000) {
@@ -112,9 +155,10 @@ function preloadImage(src, timeout = 10000) {
     });
 }
 
-// constant velocity, min time for pic is 1s
 async function renderImage(src, altText = "IMAGE", extraClasses = "") {
     await typeText(`>> DOWNLOADING: ${altText}...`, 5);
+    const speed = getSpeed();
+
     try {
         await preloadImage(src);
         const container = document.createElement('div');
@@ -140,17 +184,16 @@ async function renderImage(src, altText = "IMAGE", extraClasses = "") {
         const targetScroll = screen.scrollHeight - screen.clientHeight;
         const maxScrollDistance = targetScroll - startScroll;
 
-        const scanSpeed = 240; 
-        let durationSec = imgHeight / scanSpeed;
-        if (durationSec < 0.8) durationSec = 0.8;
+        // 根据配置计算扫描时间
+        let durationSec = imgHeight / speed.IMG_SCAN_SPEED;
+        if (durationSec < speed.IMG_MIN_TIME) durationSec = speed.IMG_MIN_TIME;
         const durationMs = durationSec * 1000;
 
- 
         img.style.transition = `clip-path ${durationSec}s linear`;
         img.classList.add('loaded');
 
         if (maxScrollDistance > 0) {
-            const stepTime = 40;
+            const stepTime = state.speedMode === 'FAST' ? 20 : 40;
             const steps = Math.ceil(durationMs / stepTime);
             
             for (let i = 1; i <= steps; i++) {
@@ -192,83 +235,131 @@ function parsePythonLine(line) {
 }
 
 async function renderCodeBox(filename, codeLines) {
+    const speed = getSpeed();
+    const isFast = state.speedMode === 'FAST';
+
     const panel = document.createElement('div');
     panel.className = 'code-panel';
     const header = document.createElement('div');
     header.className = 'code-header';
-    header.innerHTML = `<span>SRC: ${filename}</span><span>PYTHON</span>`;
+    header.innerHTML = `<span>SRC: ${filename}</span><span>${isFast ? 'BURST_READ' : 'PYTHON'}</span>`;
     panel.appendChild(header);
+    
     const body = document.createElement('div');
     body.className = 'code-body';
     panel.appendChild(body);
     outputDiv.appendChild(panel);
     scrollToBottom();
-    for (let line of codeLines) {
+
+    for (let i = 0; i < codeLines.length; i++) {
+        const line = codeLines[i];
         const lineDiv = document.createElement('div');
         body.appendChild(lineDiv);
         const tokens = parsePythonLine(line);
+        
         for (let token of tokens) {
             const span = document.createElement('span');
             if (token.type !== 'normal') span.className = `token-${token.type}`;
-            lineDiv.appendChild(span);
-            for (let char of token.text) { span.textContent += char; await sleep(2); }
+            
+            if (speed.CODE_CHAR > 0) {
+                lineDiv.appendChild(span);
+                for (let char of token.text) { span.textContent += char; await sleep(speed.CODE_CHAR); }
+            } else {
+                span.textContent = token.text;
+                lineDiv.appendChild(span);
+            }
         }
         lineDiv.appendChild(document.createTextNode('\n'));
-        scrollToBottom();
-        await sleep(10);
+        
+        if (speed.CODE_LINE > 0) {
+            scrollToBottom();
+            await sleep(speed.CODE_LINE);
+        } else if (i % 2 === 0) {
+            // Fast mode: prevents browser lockup
+            scrollToBottom();
+            await new Promise(r => setTimeout(r, 0));
+        }
     }
-    await sleep(100);
+    
+    if (isFast) {
+        header.innerHTML = `<span>SRC: ${filename}</span><span>PYTHON</span>`;
+    }
+    await sleep(isFast ? 50 : 100);
 }
 
-async function renderContent(contentString) {
+// 核心渲染入口：统一处理Normal和Fast模式
+async function renderContent(contentString, isFastMode = false) {
     state.mode = 'RenderContent';
+    state.speedMode = isFastMode ? 'FAST' : 'NORMAL'; // 根据传入模式设定全局渲染速度
+    
+    if (isFastMode) document.body.classList.add('system-overclock');
+
     interactiveDiv.innerHTML = '';
     globalCursor.style.display = 'inline-block';
 
-    await typeText(">> READING DATA STREAM...", 5);
-    await sleep(200);
+    const speed = getSpeed();
+
+    if (isFastMode) {
+        await typeDebug(">> WARNING: HIGH-SPEED DATA STREAM INITIATED...", 8);
+        await sleep(500);
+    } else {
+        await typeText(">> READING DATA STREAM...", 5);
+        await sleep(200);
+    }
 
     const lines = contentString.split('\n');
     let inCodeBlock = false, codeBuffer = [], codeFilename = "script.py";
 
-    for (let line of lines) {
-        const trimmed = line.trim();
-        if (trimmed.startsWith('[[CODE:')) { 
-            inCodeBlock = true; 
-            codeFilename = trimmed.replace(/\[\[CODE:|\]\]/g, '').trim(); 
-            codeBuffer = []; 
-            continue; 
+    try {
+        for (let line of lines) {
+            const trimmed = line.trim();
+
+            if (trimmed.startsWith('[[CODE:')) { 
+                inCodeBlock = true; 
+                codeFilename = trimmed.replace(/\[\[CODE:|\]\]/g, '').trim(); 
+                codeBuffer = []; 
+                continue; 
+            }
+            if (trimmed === '[[ENDCODE]]') { 
+                inCodeBlock = false; 
+                await renderCodeBox(codeFilename, codeBuffer); 
+                continue; 
+            }
+            if (inCodeBlock) { 
+                codeBuffer.push(line); 
+                continue; 
+            }
+            if (trimmed.startsWith('[[IMG:')) {
+                const rawContent = trimmed.replace(/\[\[IMG:|\]\]/g, '');
+                const parts = rawContent.split('|').map(p => p.trim());
+                const src = parts[0]; 
+                const alt = parts[1] || "IMAGE";
+                const extraClasses = parts.slice(2).join(' ');
+                await renderImage(src, alt, extraClasses); 
+                continue;
+            }
+            if (trimmed.startsWith('[[PAUSE:')) { 
+                const baseTime = parseInt(trimmed.replace(/\D/g, ''));
+                await sleep(baseTime * speed.PAUSE_MULT); 
+                continue; 
+            }
+            if (line.includes('<') && line.includes('>')) {
+                await typeTextHTML(line);
+            } else if (line.length > 0) {
+                await typeText(line, null);
+            }
         }
-        if (trimmed === '[[ENDCODE]]') { 
-            inCodeBlock = false; 
-            await renderCodeBox(codeFilename, codeBuffer); 
-            continue; 
-        }
-        if (inCodeBlock) { 
-            codeBuffer.push(line); 
-            continue; 
-        }
-        if (trimmed.startsWith('[[IMG:')) {
-            const rawContent = trimmed.replace(/\[\[IMG:|\]\]/g, '');
-            const parts = rawContent.split('|').map(p => p.trim());
-            const src = parts[0]; 
-            const alt = parts[1] ? parts[1] : "IMAGE";
-            const extraClasses = parts.slice(2).join(' ');
-            await renderImage(src, alt, extraClasses); 
-            continue;
-        }
-        if (trimmed.startsWith('[[PAUSE:')) { 
-            await sleep(parseInt(trimmed.replace(/\D/g, ''))); 
-            continue; 
-        }
-        if (line.includes('<') && line.includes('>')) {
-            await typeTextHTML(line);
+    } finally {
+        if (isFastMode) {
+            document.body.classList.remove('system-overclock');
+            await sleep(200);
+            await typeDebug("\n>> [STREAM COMPLETE. SYSTEMS STABILIZED.]", 5);
         } else {
-            await typeText(line);
+            await typeText("\n>> [EOF]");
         }
+        // 重置回普通速度
+        state.speedMode = 'NORMAL'; 
     }
-    
-    await typeText("\n>> [EOF]");
     
     const hasMath = contentString.includes('$') || contentString.includes('$$');
     if (hasMath && window.MathJax && typeof window.MathJax.typeset === 'function') {
@@ -289,267 +380,6 @@ async function renderContent(contentString) {
     }
     
     await typeText("Press [ENTER] to return...");
-    waitForEnter();
-}
-
-async function fastTypeTextHTML(htmlContent) {
-    const lineDiv = document.createElement('div');
-    lineDiv.className = 'output-line';
-    outputDiv.appendChild(lineDiv);
-    const tempDiv = document.createElement('div');
-    tempDiv.innerHTML = htmlContent;
-
-    async function transfer(source, target) {
-        for (const node of Array.from(source.childNodes)) {
-            if (node.nodeType === Node.TEXT_NODE) {
-                const textNode = document.createTextNode('');
-                target.appendChild(textNode);
-                const text = node.textContent;
-                let i = 0;
-                while (i < text.length) {
-                    textNode.textContent += text.substring(i, i + 8);
-                    i += 8;
-                    scrollToBottom();
-                    await new Promise(r => setTimeout(r, 0)); 
-                }
-            } else if (node.nodeType === Node.ELEMENT_NODE) {
-                const newEl = document.createElement(node.tagName);
-                Array.from(node.attributes).forEach(a => newEl.setAttribute(a.name, a.value));
-                target.appendChild(newEl);
-                await transfer(node, newEl);
-            }
-        }
-    }
-    await transfer(tempDiv, lineDiv);
-}
-
-
-// 0.6s for all pics!
-async function fastRenderImage(src, altText = "IMAGE", extraClasses = "") {
-    await typeText(`>> FAST-LOAD: ${altText}`, 2); 
-    try {
-        await preloadImage(src);
-        const container = document.createElement('div');
-        container.className = `img-container ${extraClasses}`;
-        const img = document.createElement('img');
-        img.src = src;
-        img.className = 'scan-effect';
-        
-        img.style.transition = "clip-path 0.4s linear";
-        container.appendChild(img);
-        
-        const screen = document.querySelector('.screen');
-        const startScroll = screen.scrollTop;
-        
-        outputDiv.appendChild(container);
-        void img.offsetWidth;
-        
-        const rect = img.getBoundingClientRect();
-        const screenRect = screen.getBoundingClientRect();
-        const imgHeight = img.offsetHeight;
-
-        let safeVisibleHeight = (screenRect.bottom - CONFIG.CRT_SCROLL_PADDING) - rect.top;
-        const clampedSafeHeight = Math.max(0, Math.min(safeVisibleHeight, imgHeight));
-        
-        const targetScroll = screen.scrollHeight - screen.clientHeight;
-        const maxScrollDistance = targetScroll - startScroll;
-         
-        img.classList.add('loaded');
-
-        if (maxScrollDistance > 0) {
-            const steps = 40;
-            for (let i = 1; i <= steps; i++) {
-                const currentScanY = imgHeight * (i / steps);
-                if (currentScanY > clampedSafeHeight) {
-                    let pushDown = currentScanY - clampedSafeHeight;
-                    screen.scrollTop = startScroll + Math.min(pushDown, maxScrollDistance);
-                }
-                await sleep(10); 
-            }
-        } else {
-            await sleep(400);
-        }
-
-        scrollToBottom();
-
-    } catch (e) { await typeError(`>> [LOAD FAIL]`); }
-}
-
-
-// constant speed version for fast mode, 600px/s, 0.6s at least
-// async function fastRenderImage(src, altText = "IMAGE", extraClasses = "") {
-    // await typeText(`>> FAST-LOAD: ${altText}`, 2); 
-    // try {
-        // await preloadImage(src);
-        // const container = document.createElement('div');
-        // container.className = `img-container ${extraClasses}`;
-        // const img = document.createElement('img');
-        // img.src = src;
-        // img.className = 'scan-effect';
-        // container.appendChild(img);
-        
-        // const screen = document.querySelector('.screen');
-        // const startScroll = screen.scrollTop;
-        
-        // outputDiv.appendChild(container);
-        // void img.offsetWidth;
-        
-        // const rect = img.getBoundingClientRect();
-        // const screenRect = screen.getBoundingClientRect();
-        // const imgHeight = img.offsetHeight;
-
-        // let safeVisibleHeight = (screenRect.bottom - CONFIG.CRT_SCROLL_PADDING) - rect.top;
-        // const clampedSafeHeight = Math.max(0, Math.min(safeVisibleHeight, imgHeight));
-        
-        // const targetScroll = screen.scrollHeight - screen.clientHeight;
-        // const maxScrollDistance = targetScroll - startScroll;
-         
-        // const fastScanSpeed = 600;
-        // let durationSec = imgHeight / fastScanSpeed;
-        // if (durationSec < 0.6) durationSec = 0.6;
-        // const durationMs = durationSec * 1000;
-
-        // img.style.transition = `clip-path ${durationSec}s linear`;
-        // img.classList.add('loaded');
-
-        // if (maxScrollDistance > 0) {
-            // const stepTime = 20;
-            // const steps = Math.ceil(durationMs / stepTime);
-            
-            // for (let i = 1; i <= steps; i++) {
-                // const currentScanY = imgHeight * (i / steps);
-                // if (currentScanY > clampedSafeHeight) {
-                    // let pushDown = currentScanY - clampedSafeHeight;
-                    // screen.scrollTop = startScroll + Math.min(pushDown, maxScrollDistance);
-                // }
-                // await sleep(stepTime); 
-            // }
-        // } else {
-            // await sleep(durationMs);
-        // }
-
-        // scrollToBottom();
-
-    // } catch (e) { await typeError(`>> [LOAD FAIL]`); }
-// }
-
-
-async function fastRenderCodeBox(filename, codeLines) {
-    const panel = document.createElement('div');
-    panel.className = 'code-panel';
-    
-    const header = document.createElement('div');
-    header.className = 'code-header';
-    header.innerHTML = `<span>SRC: ${filename}</span><span>BURST_READ</span>`;
-    panel.appendChild(header);
-    
-    const body = document.createElement('div');
-    body.className = 'code-body';
-    panel.appendChild(body);
-    outputDiv.appendChild(panel);
-    scrollToBottom();
-
-    for (let line of codeLines) {
-        const lineDiv = document.createElement('div');
-        body.appendChild(lineDiv);
-        
-        const tokens = parsePythonLine(line);
-        
-        for (let token of tokens) {
-            const span = document.createElement('span');
-            if (token.type !== 'normal') span.className = `token-${token.type}`;
-            span.textContent = token.text;
-            lineDiv.appendChild(span);
-        }
-        
-        lineDiv.appendChild(document.createTextNode('\n'));
-        
-        if (codeLines.indexOf(line) % 2 === 0) {
-            scrollToBottom();
-            await sleep(15);
-            await new Promise(r => setTimeout(r, 0)); 
-        }
-    }
-    
-    header.innerHTML = `<span>SRC: ${filename}</span><span>PYTHON</span>`;
-    await sleep(50); 
-}
-
-async function fastRenderContent(contentString) {
-    document.body.classList.add('system-overclock');
-    state.mode = 'RenderContent';
-    interactiveDiv.innerHTML = '';
-    globalCursor.style.display = 'inline-block';
-
-    await typeDebug(">> WARNING: HIGH-SPEED DATA STREAM INITIATED...", 8);
-    await sleep(500);
-
-    const lines = contentString.split('\n');
-    let inCodeBlock = false, codeBuffer = [], codeFilename = "script.py";
-
-    try {
-        for (let line of lines) {
-            const trimmed = line.trim();
-
-            if (trimmed.startsWith('[[CODE:')) { 
-                inCodeBlock = true; 
-                codeFilename = trimmed.replace(/\[\[CODE:|\]\]/g, '').trim(); 
-                codeBuffer = []; 
-                continue; 
-            }
-            if (trimmed === '[[ENDCODE]]') { 
-                inCodeBlock = false; 
-                await fastRenderCodeBox(codeFilename, codeBuffer); 
-                continue; 
-            }
-            if (inCodeBlock) { codeBuffer.push(line); continue; }
-
-            if (trimmed.startsWith('[[IMG:')) {
-                const rawContent = trimmed.replace(/\[\[IMG:|\]\]/g, '');
-                const parts = rawContent.split('|').map(p => p.trim());
-                const src = parts[0];
-                const alt = parts[1] || "IMAGE";
-                const extraClasses = parts.slice(2).join(' ');
-                await fastRenderImage(src, alt, extraClasses); 
-                continue;
-            }
-
-            if (trimmed.startsWith('[[PAUSE:')) { 
-                const pTime = parseInt(trimmed.replace(/\D/g, ''));
-                await sleep(pTime / 4); 
-                continue; 
-            }
-
-            if (line.length > 0) {
-                await fastTypeTextHTML(line);
-            }
-        }
-    } finally {
-        document.body.classList.remove('system-overclock');
-    }
-
-    await sleep(200);
-    await typeDebug("\n>> [STREAM COMPLETE. SYSTEMS STABILIZED.]", 5);
-
-    const hasMath = contentString.includes('$') || contentString.includes('$$');
-    if (hasMath && window.MathJax && typeof window.MathJax.typeset === 'function') {
-        await typeText(">> RENDERING MATH EQUATIONS...", 5);
-        try {
-            window.MathJax.typesetClear([outputDiv]);
-            window.MathJax.typeset([outputDiv]);
-            await typeText(">> MATH ENGINE: [DONE]", 2, 'crt-blue');
-        } catch (err) {
-            if (typeof window.MathJax.typesetPromise === 'function') {
-                window.MathJax.typesetPromise([outputDiv]).catch(e => console.warn("MathJax Async:", e));
-                await sleep(100);
-                await typeText(">> MATH ENGINE: [ASYNC DONE]", 2, 'crt-amber');
-            } else {
-                await typeError(`>> [MATH ERROR] ${err.message}`);
-            }
-        }
-    }
-
-    await typeText("Press [ENTER] to return...", 5);
     waitForEnter();
 }
 
@@ -615,11 +445,9 @@ async function handleSelection(option) {
             title: currentTitle,
             items: currentItems
         };
-        if (option.mode === 'fast') {
-            await fastRenderContent(option.content);
-        } else {
-            await renderContent(option.content);
-        }
+        // 这里根据 option.mode 决定是否开启快读模式
+        const isFast = option.mode === 'fast';
+        await renderContent(option.content, isFast);
     } 
     else if (option.type === 'back') {
         const parent = state.menuStack.pop();
@@ -667,7 +495,7 @@ async function displaySystemHeader() {
         await sleep(200);
         await typeText("--------------------------------------------------", 0);
         for (const news of newsList) {
-            await typeTextHTML(` * ${news}`, 5); 
+            await typeTextHTML(` * ${news}`); 
             await sleep(50);
         }
         await typeText("--------------------------------------------------", 0);
@@ -721,11 +549,11 @@ async function bootSequence() {
         if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
         fileSystem = await response.json();
         await sleep(300);
-        await typeTextHTML(">> DATA INTEGRITY CHECK: <span class='crt-blue'>PASS</span>", 5);
+        await typeTextHTML(">> DATA INTEGRITY CHECK: <span class='crt-blue'>PASS</span>");
     } catch (error) {
-        await typeError(`[FATAL ERROR] FAILED TO LOAD SYSTEM DATA.`, 5);
-        await typeDebug(`DEBUG INFO: ${error.message}`, 5);
-        await typeDebug(`Please check server connection.`, 5);
+        await typeError(`[FATAL ERROR] FAILED TO LOAD SYSTEM DATA.`);
+        await typeDebug(`DEBUG INFO: ${error.message}`);
+        await typeDebug(`Please check server connection.`);
         const errDiv = document.createElement('div');
         errDiv.className = 'error-msg';
         errDiv.textContent = "SYSTEM HALTED";
