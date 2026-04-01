@@ -4,8 +4,6 @@ on:
   push:
     branches:
       - main
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 permissions:
   contents: read
@@ -16,26 +14,68 @@ jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
     steps:
+      # ==========================================================
+      # 1. 基础环境设置 (全面拥抱 Node 24)
+      # ==========================================================
+      
+      # [真正的前沿]: 按照你提供的官方日志，直接上 v6！
+      # 原生支持 Node 24，且改进了凭证安全性，不会再报任何 deprecating warning。
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
+
+      # 显式声明使用 Node 24 环境运行后续的本地脚本
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      # ==========================================================
+      # 2. 现代资产构建与压缩 (告别 npx 报错和陈旧包警告)
+      # ==========================================================
+      
+      - name: Install Latest Build Tools
+        # 抛弃 clean-css，改用现代前端标配的 postcss + cssnano
+        run: npm install terser postcss cssnano postcss-cli --silent
 
       - name: Minify Assets
         run: |
           mkdir -p dist/css dist/js dist/contents
           
-          # 1. 拷贝资源
-          cp -r db images terminal dist/ 2>/dev/null || :
+          # 拷贝资源
+          cp -r db images terminal dist/ 2>/dev/null || true
           
-          # 2. 压缩 JS/CSS/JSON (使用本地工具更稳定)
-          for f in js/*.js; do [ -e "$f" ] || continue; fn=$(basename "$f"); npx terser "$f" -o "dist/js/$fn"; done
-          for f in css/*.css; do [ -e "$f" ] || continue; fn=$(basename "$f"); npx clean-css-cli -o "dist/css/$fn" "$f"; done
-          for f in contents/*.json; do [ -e "$f" ] || continue; fn=$(basename "$f"); jq -c . "$f" > "dist/contents/$fn"; done
+          # 压缩 JS (直接调用 node_modules 里的干净依赖)
+          for f in js/*.js; do 
+            [ -e "$f" ] || continue
+            fn=$(basename "$f")
+            ./node_modules/.bin/terser "$f" -o "dist/js/$fn" --compress --mangle
+          done
           
-          # 3. 拷贝核心文件
-          cp index.html CNAME favicon.ico dist/ 2>/dev/null || :
+          # 压缩 CSS (使用 postcss，彻底解决原先远程字体 @import 导致的警告)
+          echo "module.exports = { plugins: [require('cssnano')] }" > postcss.config.js
+          for f in css/*.css; do 
+            [ -e "$f" ] || continue
+            fn=$(basename "$f")
+            ./node_modules/.bin/postcss "$f" -o "dist/css/$fn"
+          done
+          
+          # 压缩 JSON
+          for f in contents/*.json; do 
+            [ -e "$f" ] || continue
+            fn=$(basename "$f")
+            jq -c . "$f" > "dist/contents/$fn"
+          done
+          
+          # 拷贝核心文件
+          cp index.html CNAME favicon.ico dist/ 2>/dev/null || true
 
+      # ==========================================================
+      # 3. GitHub Pages 部署 (全系升级)
+      # ==========================================================
+
+      # Pages 配置系列也全部使用已适配 Node 24 的新版本
       - name: Setup Pages
-        uses: actions/configure-pages@v4
+        uses: actions/configure-pages@v5
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
