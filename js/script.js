@@ -67,32 +67,56 @@ function scrollToBottom() {
 async function typeText(text, customDelay = null, className = '') {
     if (!text) return;
     const lineDiv = document.createElement('div');
-    lineDiv.className = `output-line ${className}`;
+    lineDiv.className = `output-line ${className}`; 
     outputDiv.appendChild(lineDiv);
 
     const speed = getSpeed();
-    const delay = customDelay !== null ? customDelay : speed.TEXT_DELAY;
-    const step = speed.TEXT_STEP;
+    // 就算你要很快，这里的 delay 可以设成 5 甚至 2
+    const delay = customDelay !== null ? customDelay : speed.TEXT_DELAY; 
+    const step = speed.TEXT_STEP; // 依然必须是 1
     let i = 0;
     
+    // --- 新增：突发控制变量 ---
+    let burstCount = 0;
+    // 每次随机决定一口气吐出几个字符 (比如 2 到 5 个)
+    let currentBurstTarget = Math.floor(Math.random() * 4) + 2; 
+
     while (i < text.length) {
         const chunk = text.substring(i, i + step);
         lineDiv.textContent += chunk;
         i += step;
+        burstCount++;
+
+        // 判断：是否达到了这次突发的配额？或者是否遇到了标点/空格？
+        const isPunctuation = /[.!?。！？]/.test(chunk);
+        const isSpace = /\s/.test(chunk);
         
-        scrollToBottom();
-        
-        if (delay > 0) {
-            const isEnd = /[.!?。！？]/.test(chunk);
-            await sleep(isEnd ? delay * 3 : delay);
-        } else {
-            await new Promise(r => setTimeout(r, 0));
+        if (burstCount >= currentBurstTarget || isPunctuation || isSpace) {
+            scrollToBottom();
+            
+            if (delay > 0) {
+                let baseDelay = delay;
+                if (isPunctuation) baseDelay = delay * 5;
+                else if (isSpace) baseDelay = delay * 1.5;
+                
+                // 将积累的字符延迟合并，并加入机械抖动
+                // 比如攒了 4 个字，delay是 5ms，那就一次性停顿 20ms + 随机抖动
+                let totalDelay = (baseDelay * burstCount) + (Math.random() - 0.5) * (delay * 3);
+                
+                await sleep(totalDelay);
+            } else {
+                await new Promise(r => setTimeout(r, 0));
+            }
+            
+            // 这一波吐完了，重置计数器，生成下一次突发的随机目标
+            burstCount = 0;
+            currentBurstTarget = Math.floor(Math.random() * 5) + 1; // 下一次吐 1~5 个字
         }
+        // 如果没达到突发配额，什么都不 await！
+        // 让 JS 在同一帧内以光速把下一个字也塞进 DOM。
     }
 
-    if (speed.LINE_DELAY > 0) {
-        await sleep(speed.LINE_DELAY);
-    }
+    if (speed.LINE_DELAY > 0) await sleep(speed.LINE_DELAY);
 }
 
 async function typeError(text) { await typeText(text, 30, 'text-error'); }
@@ -100,15 +124,20 @@ async function typeDebug(text) { await typeText(text, 10, 'text-debug'); }
 
 async function typeTextHTML(htmlContent) {
     const lineDiv = document.createElement('div');
-    lineDiv.className = 'output-line';
+    lineDiv.className = 'output-line typing'; 
     outputDiv.appendChild(lineDiv);
 
     const tempDiv = document.createElement('div');
     tempDiv.innerHTML = htmlContent;
     const speed = getSpeed();
 
+    // --- 新增：跨节点的突发控制状态 ---
+    // 把它放在 transferNodes 外面，这样即使跨越 <span> 等标签，机械节奏也不会被打断
+    let burstCount = 0;
+    // 随机决定一口气吐出 1~4 个字符
+    let currentBurstTarget = Math.floor(Math.random() * 4) + 1; 
+
     async function transferNodes(source, target) {
-        // ... (保持你现有的 transferNodes 内部逻辑不变) ...
         const nodes = Array.from(source.childNodes);
         for (const node of nodes) {
             if (node.nodeType === Node.TEXT_NODE) {
@@ -116,15 +145,40 @@ async function typeTextHTML(htmlContent) {
                 target.appendChild(textNode);
                 const text = node.textContent;
                 let i = 0;
+                
+                // 为了最佳顿挫感，这里的步长必须是 1
+                const step = speed.HTML_STEP; 
 
                 while (i < text.length) {
-                    textNode.textContent += text.substring(i, i + speed.HTML_STEP);
-                    i += speed.HTML_STEP;
-                    scrollToBottom();
-                    if (speed.HTML_DELAY > 0) {
-                        await sleep(speed.HTML_DELAY);
-                    } else {
-                        await new Promise(r => setTimeout(r, 0));
+                    const chunk = text.substring(i, i + step);
+                    textNode.textContent += chunk;
+                    i += step;
+                    burstCount++;
+
+                    // 检查标点和空格
+                    const isPunctuation = /[.!?。！？]/.test(chunk);
+                    const isSpace = /\s/.test(chunk);
+
+                    // 触发条件：达到突发配额，或者遇到标点/空格
+                    if (burstCount >= currentBurstTarget || isPunctuation || isSpace) {
+                        scrollToBottom();
+                        
+                        if (speed.HTML_DELAY > 0) {
+                            let baseDelay = speed.HTML_DELAY;
+                            if (isPunctuation) baseDelay = speed.HTML_DELAY * 5;
+                            else if (isSpace) baseDelay = speed.HTML_DELAY * 1.5;
+                            
+                            // 累积延迟 + 机械抖动
+                            let totalDelay = (baseDelay * burstCount) + (Math.random() - 0.5) * (speed.HTML_DELAY * 3);
+                            
+                            await sleep(totalDelay);
+                        } else {
+                            await new Promise(r => setTimeout(r, 0));
+                        }
+                        
+                        // 重置计数器并生成下一个随机配额
+                        burstCount = 0;
+                        currentBurstTarget = Math.floor(Math.random() * 4) + 1; 
                     }
                 }
             } 
@@ -132,6 +186,7 @@ async function typeTextHTML(htmlContent) {
                 const newElement = document.createElement(node.tagName);
                 Array.from(node.attributes).forEach(attr => newElement.setAttribute(attr.name, attr.value));
                 target.appendChild(newElement);
+                // 递归处理子节点
                 await transferNodes(node, newElement);
             }
         }
@@ -139,10 +194,12 @@ async function typeTextHTML(htmlContent) {
 
     await transferNodes(tempDiv, lineDiv);
     
+    // HTML 渲染完毕，移除当前行的光标
+    lineDiv.classList.remove('typing');
+    
+    // 原有的微小停顿与行末停顿
     if (speed.HTML_DELAY > 0) await sleep(20); 
-    if (speed.LINE_DELAY > 0) {
-        await sleep(speed.LINE_DELAY);
-    }
+    if (speed.LINE_DELAY > 0) await sleep(speed.LINE_DELAY);
 }
 
 function preloadImage(src, timeout = 10000) {
