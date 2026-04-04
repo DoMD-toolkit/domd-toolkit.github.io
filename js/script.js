@@ -124,7 +124,7 @@ async function typeDebug(text) { await typeText(text, 10, 'text-debug'); }
 
 async function typeTextHTML(htmlContent) {
     const lineDiv = document.createElement('div');
-    lineDiv.className = 'output-line typing'; 
+    lineDiv.className = 'output-line'; 
     outputDiv.appendChild(lineDiv);
 
     const tempDiv = document.createElement('div');
@@ -193,9 +193,6 @@ async function typeTextHTML(htmlContent) {
     }
 
     await transferNodes(tempDiv, lineDiv);
-    
-    // HTML 渲染完毕，移除当前行的光标
-    lineDiv.classList.remove('typing');
     
     // 原有的微小停顿与行末停顿
     if (speed.HTML_DELAY > 0) await sleep(20); 
