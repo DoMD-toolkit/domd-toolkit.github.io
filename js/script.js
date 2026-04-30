@@ -5,26 +5,25 @@
 const CONFIG = {
     DATA_URL: '/contents/data.json',  
     CRT_SCROLL_PADDING: 40,
-    // 统一管理渲染速度配置
     SPEED: {
         NORMAL: {
-            TEXT_DELAY: 8,       // 普通文本打字延迟(ms)
-            TEXT_STEP: 1,        // 普通文本每次输出字符数
-            HTML_DELAY: 8,       // HTML文本打字延迟(ms)
-            HTML_STEP: 1,        // HTML文本每次输出字符数
-			LINE_DELAY: 220,     // 模拟物理打字机换行时的停顿(ms)
-            IMG_SCAN_SPEED: 240, // 图片扫描速度 (像素/秒)
-            IMG_MIN_TIME: 0.8,   // 图片最少扫描时间(秒)
-            CODE_CHAR: 5,        // 代码逐字延迟(ms)
-            CODE_LINE: 10,       // 代码逐行延迟(ms)
-            PAUSE_MULT: 1        // [[PAUSE:xx]] 指令的时间倍率
+            TEXT_DELAY: 8,       
+            TEXT_STEP: 1,        
+            HTML_DELAY: 8,       
+            HTML_STEP: 1,        
+            LINE_DELAY: 220,     
+            IMG_SCAN_SPEED: 240, 
+            IMG_MIN_TIME: 0.8,   
+            CODE_CHAR: 5,        
+            CODE_LINE: 10,       
+            PAUSE_MULT: 1        
         },
         FAST: {
             TEXT_DELAY: 0,
             TEXT_STEP: 8,
             HTML_DELAY: 0,
             HTML_STEP: 8,
-			LINE_DELAY: 0,       // <--- 快速模式无需换行停顿
+            LINE_DELAY: 0,       
             IMG_SCAN_SPEED: 600,
             IMG_MIN_TIME: 0.4,
             CODE_CHAR: 0,
@@ -39,7 +38,8 @@ let fileSystem = null;
 let state = {
     isBooting: true,
     mode: 'NONE',
-    speedMode: 'NORMAL',              // 新增：当前系统的运行速度模式
+    speedMode: 'NORMAL',              
+    skipRender: false,     // [核心开关]：控制是否光速跳过渲染
     menuIndex: 0,
     currentMenuOptions: [],
     menuStack: [],
@@ -50,14 +50,13 @@ const outputDiv = document.getElementById('terminal-output');
 const interactiveDiv = document.getElementById('interactive-area');
 const globalCursor = document.getElementById('global-cursor');
 
-// 获取当前速度配置的快捷方法
 const getSpeed = () => CONFIG.SPEED[state.speedMode];
 
 // =============================================================================
 //  CORE ENGINE (核心渲染引擎)
 // =============================================================================
 
-const sleep = ms => new Promise(r => setTimeout(r, ms));
+const sleep = ms => new Promise(r => setTimeout(r, state.skipRender ? 0 : ms));
 
 function scrollToBottom() {
     const screen = document.querySelector('.screen');
@@ -71,23 +70,25 @@ async function typeText(text, customDelay = null, className = '') {
     outputDiv.appendChild(lineDiv);
 
     const speed = getSpeed();
-    // 就算你要很快，这里的 delay 可以设成 5 甚至 2
     const delay = customDelay !== null ? customDelay : speed.TEXT_DELAY; 
-    const step = speed.TEXT_STEP; // 依然必须是 1
+    const step = speed.TEXT_STEP; 
     let i = 0;
     
-    // --- 新增：突发控制变量 ---
     let burstCount = 0;
-    // 每次随机决定一口气吐出几个字符 (比如 2 到 5 个)
     let currentBurstTarget = Math.floor(Math.random() * 4) + 2; 
 
     while (i < text.length) {
+        if (state.skipRender) {
+            lineDiv.textContent += text.substring(i);
+            scrollToBottom();
+            break; 
+        }
+
         const chunk = text.substring(i, i + step);
         lineDiv.textContent += chunk;
         i += step;
         burstCount++;
 
-        // 判断：是否达到了这次突发的配额？或者是否遇到了标点/空格？
         const isPunctuation = /[.!?。！？]/.test(chunk);
         const isSpace = /\s/.test(chunk);
         
@@ -99,24 +100,18 @@ async function typeText(text, customDelay = null, className = '') {
                 if (isPunctuation) baseDelay = delay * 5;
                 else if (isSpace) baseDelay = delay * 1.5;
                 
-                // 将积累的字符延迟合并，并加入机械抖动
-                // 比如攒了 4 个字，delay是 5ms，那就一次性停顿 20ms + 随机抖动
                 let totalDelay = (baseDelay * burstCount) + (Math.random() - 0.5) * (delay * 3);
-                
                 await sleep(totalDelay);
             } else {
                 await new Promise(r => setTimeout(r, 0));
             }
             
-            // 这一波吐完了，重置计数器，生成下一次突发的随机目标
             burstCount = 0;
-            currentBurstTarget = Math.floor(Math.random() * 5) + 1; // 下一次吐 1~5 个字
+            currentBurstTarget = Math.floor(Math.random() * 5) + 1; 
         }
-        // 如果没达到突发配额，什么都不 await！
-        // 让 JS 在同一帧内以光速把下一个字也塞进 DOM。
     }
 
-    if (speed.LINE_DELAY > 0) await sleep(speed.LINE_DELAY);
+    if (speed.LINE_DELAY > 0 && !state.skipRender) await sleep(speed.LINE_DELAY);
 }
 
 async function typeError(text) { await typeText(text, 30, 'text-error'); }
@@ -131,10 +126,7 @@ async function typeTextHTML(htmlContent) {
     tempDiv.innerHTML = htmlContent;
     const speed = getSpeed();
 
-    // --- 新增：跨节点的突发控制状态 ---
-    // 把它放在 transferNodes 外面，这样即使跨越 <span> 等标签，机械节奏也不会被打断
     let burstCount = 0;
-    // 随机决定一口气吐出 1~4 个字符
     let currentBurstTarget = Math.floor(Math.random() * 4) + 1; 
 
     async function transferNodes(source, target) {
@@ -145,21 +137,23 @@ async function typeTextHTML(htmlContent) {
                 target.appendChild(textNode);
                 const text = node.textContent;
                 let i = 0;
-                
-                // 为了最佳顿挫感，这里的步长必须是 1
                 const step = speed.HTML_STEP; 
 
                 while (i < text.length) {
+                    if (state.skipRender) {
+                        textNode.textContent += text.substring(i);
+                        scrollToBottom();
+                        break;
+                    }
+
                     const chunk = text.substring(i, i + step);
                     textNode.textContent += chunk;
                     i += step;
                     burstCount++;
 
-                    // 检查标点和空格
                     const isPunctuation = /[.!?。！？]/.test(chunk);
                     const isSpace = /\s/.test(chunk);
 
-                    // 触发条件：达到突发配额，或者遇到标点/空格
                     if (burstCount >= currentBurstTarget || isPunctuation || isSpace) {
                         scrollToBottom();
                         
@@ -168,15 +162,12 @@ async function typeTextHTML(htmlContent) {
                             if (isPunctuation) baseDelay = speed.HTML_DELAY * 5;
                             else if (isSpace) baseDelay = speed.HTML_DELAY * 1.5;
                             
-                            // 累积延迟 + 机械抖动
                             let totalDelay = (baseDelay * burstCount) + (Math.random() - 0.5) * (speed.HTML_DELAY * 3);
-                            
                             await sleep(totalDelay);
                         } else {
                             await new Promise(r => setTimeout(r, 0));
                         }
                         
-                        // 重置计数器并生成下一个随机配额
                         burstCount = 0;
                         currentBurstTarget = Math.floor(Math.random() * 4) + 1; 
                     }
@@ -186,7 +177,6 @@ async function typeTextHTML(htmlContent) {
                 const newElement = document.createElement(node.tagName);
                 Array.from(node.attributes).forEach(attr => newElement.setAttribute(attr.name, attr.value));
                 target.appendChild(newElement);
-                // 递归处理子节点
                 await transferNodes(node, newElement);
             }
         }
@@ -194,9 +184,8 @@ async function typeTextHTML(htmlContent) {
 
     await transferNodes(tempDiv, lineDiv);
     
-    // 原有的微小停顿与行末停顿
-    if (speed.HTML_DELAY > 0) await sleep(20); 
-    if (speed.LINE_DELAY > 0) await sleep(speed.LINE_DELAY);
+    if (speed.HTML_DELAY > 0 && !state.skipRender) await sleep(20); 
+    if (speed.LINE_DELAY > 0 && !state.skipRender) await sleep(speed.LINE_DELAY);
 }
 
 function preloadImage(src, timeout = 10000) {
@@ -209,6 +198,7 @@ function preloadImage(src, timeout = 10000) {
     });
 }
 
+// [重大修复]：把动画靶点从 img 移回 container，修复图片发黑不显示的 Bug
 async function renderImage(src, altText = "IMAGE", extraClasses = "") {
     await typeText(`>> DOWNLOADING: ${altText}...`, 5);
     const speed = getSpeed();
@@ -228,9 +218,9 @@ async function renderImage(src, altText = "IMAGE", extraClasses = "") {
         outputDiv.appendChild(container);
         void img.offsetWidth;
 
-        const rect = img.getBoundingClientRect();
+        const rect = container.getBoundingClientRect();
         const screenRect = screen.getBoundingClientRect();
-        const imgHeight = img.offsetHeight;
+        const imgHeight = container.offsetHeight;
 
         let safeVisibleHeight = (screenRect.bottom - CONFIG.CRT_SCROLL_PADDING) - rect.top;
         const clampedSafeHeight = Math.max(0, Math.min(safeVisibleHeight, imgHeight));
@@ -238,12 +228,20 @@ async function renderImage(src, altText = "IMAGE", extraClasses = "") {
         const targetScroll = screen.scrollHeight - screen.clientHeight;
         const maxScrollDistance = targetScroll - startScroll;
 
-        // 根据配置计算扫描时间
-		let durationSec = imgHeight / speed.IMG_SCAN_SPEED;
+        // [修复]：跳过时，必须对 container 操作，才能去掉那 100% 的裁切！
+        if (state.skipRender) {
+            container.style.transition = 'none';
+            container.classList.add('loaded');
+            if (maxScrollDistance > 0) screen.scrollTop = startScroll + maxScrollDistance;
+            scrollToBottom();
+            return; 
+        }
+
+        let durationSec = imgHeight / speed.IMG_SCAN_SPEED;
         if (durationSec < speed.IMG_MIN_TIME) durationSec = speed.IMG_MIN_TIME;
         const durationMs = durationSec * 1000;
 
-        // 【关键修改：把动画赋予 container，而不是 img】
+        // [修复]：正常动画也要作用于 container
         container.style.transition = `clip-path ${durationSec}s linear`;
         container.classList.add('loaded');
 
@@ -252,6 +250,11 @@ async function renderImage(src, altText = "IMAGE", extraClasses = "") {
             const steps = Math.ceil(durationMs / stepTime);
             
             for (let i = 1; i <= steps; i++) {
+                if (state.skipRender) {
+                    container.style.transition = 'none';
+                    screen.scrollTop = startScroll + maxScrollDistance;
+                    break;
+                }
                 const currentScanY = imgHeight * (i / steps);
                 if (currentScanY > clampedSafeHeight) {
                     let pushDown = currentScanY - clampedSafeHeight;
@@ -316,9 +319,16 @@ async function renderCodeBox(filename, codeLines) {
             const span = document.createElement('span');
             if (token.type !== 'normal') span.className = `token-${token.type}`;
             
-            if (speed.CODE_CHAR > 0) {
+            if (speed.CODE_CHAR > 0 && !state.skipRender) {
                 lineDiv.appendChild(span);
-                for (let char of token.text) { span.textContent += char; await sleep(speed.CODE_CHAR); }
+                for (let char of token.text) { 
+                    if (state.skipRender) {
+                        span.textContent += token.text.substring(token.text.indexOf(char));
+                        break;
+                    }
+                    span.textContent += char; 
+                    await sleep(speed.CODE_CHAR); 
+                }
             } else {
                 span.textContent = token.text;
                 lineDiv.appendChild(span);
@@ -326,11 +336,10 @@ async function renderCodeBox(filename, codeLines) {
         }
         lineDiv.appendChild(document.createTextNode('\n'));
         
-        if (speed.CODE_LINE > 0) {
+        if (speed.CODE_LINE > 0 && !state.skipRender) {
             scrollToBottom();
             await sleep(speed.CODE_LINE);
         } else if (i % 2 === 0) {
-            // Fast mode: prevents browser lockup
             scrollToBottom();
             await new Promise(r => setTimeout(r, 0));
         }
@@ -342,10 +351,10 @@ async function renderCodeBox(filename, codeLines) {
     await sleep(isFast ? 50 : 100);
 }
 
-// 核心渲染入口：统一处理Normal和Fast模式
 async function renderContent(contentString, isFastMode = false) {
     state.mode = 'RenderContent';
-    state.speedMode = isFastMode ? 'FAST' : 'NORMAL'; // 根据传入模式设定全局渲染速度
+    state.speedMode = isFastMode ? 'FAST' : 'NORMAL'; 
+    state.skipRender = false; 
     
     if (isFastMode) document.body.classList.add('system-overclock');
 
@@ -354,18 +363,30 @@ async function renderContent(contentString, isFastMode = false) {
 
     const speed = getSpeed();
 
-    if (isFastMode) {
-        await typeDebug(">> WARNING: HIGH-SPEED DATA STREAM INITIATED...", 8);
-        await sleep(500);
-    } else {
-        await typeText(">> READING DATA STREAM...", 5);
-        await sleep(200);
-    }
-
-    const lines = contentString.split('\n');
-    let inCodeBlock = false, codeBuffer = [], codeFilename = "script.py";
+    const skipHandler = (e) => {
+        if (e.type === 'click' || (e.type === 'keydown' && e.key === 'Enter')) {
+            state.skipRender = true;
+        }
+    };
+    setTimeout(() => {
+        if (state.mode === 'RenderContent') {
+            document.addEventListener('keydown', skipHandler);
+            document.addEventListener('click', skipHandler);
+        }
+    }, 150);
 
     try {
+        if (isFastMode) {
+            await typeDebug(">> WARNING: HIGH-SPEED DATA STREAM INITIATED...", 8);
+            await sleep(500);
+        } else {
+            await typeText(">> READING DATA STREAM...", 5);
+            await sleep(200);
+        }
+
+        const lines = contentString.split('\n');
+        let inCodeBlock = false, codeBuffer = [], codeFilename = "script.py";
+
         for (let line of lines) {
             const trimmed = line.trim();
 
@@ -394,8 +415,10 @@ async function renderContent(contentString, isFastMode = false) {
                 continue;
             }
             if (trimmed.startsWith('[[PAUSE:')) { 
-                const baseTime = parseInt(trimmed.replace(/\D/g, ''));
-                await sleep(baseTime * speed.PAUSE_MULT); 
+                if (!state.skipRender) {
+                    const baseTime = parseInt(trimmed.replace(/\D/g, ''));
+                    await sleep(baseTime * speed.PAUSE_MULT); 
+                }
                 continue; 
             }
             if (line.includes('<') && line.includes('>')) {
@@ -405,6 +428,9 @@ async function renderContent(contentString, isFastMode = false) {
             }
         }
     } finally {
+        document.removeEventListener('keydown', skipHandler);
+        document.removeEventListener('click', skipHandler);
+        
         if (isFastMode) {
             document.body.classList.remove('system-overclock');
             await sleep(200);
@@ -412,7 +438,8 @@ async function renderContent(contentString, isFastMode = false) {
         } else {
             await typeText("\n>> [EOF]");
         }
-        // 重置回普通速度
+        
+        state.skipRender = false;
         state.speedMode = 'NORMAL'; 
     }
     
@@ -500,7 +527,6 @@ async function handleSelection(option) {
             title: currentTitle,
             items: currentItems
         };
-        // 这里根据 option.mode 决定是否开启快读模式
         const isFast = option.mode === 'fast';
         await renderContent(option.content, isFast);
     } 
@@ -520,20 +546,22 @@ async function handleSelection(option) {
 
 function waitForEnter() {
     state.mode = 'WAIT';
-    const handler = (e) => {
-        if (e.type === 'click' || e.key === 'Enter') {
-            document.removeEventListener('keydown', handler);
-            document.removeEventListener('click', handler); 
-            
-            if (state.lastMenuContext) {
-                renderMenuFromData(state.lastMenuContext.title, state.lastMenuContext.items, true);
-            } else {
-                renderMenuFromData("MAIN MENU // DOMD-TOOLKIT", fileSystem.root, true);
+    setTimeout(() => {
+        const handler = (e) => {
+            if (e.type === 'click' || e.key === 'Enter') {
+                document.removeEventListener('keydown', handler);
+                document.removeEventListener('click', handler); 
+                
+                if (state.lastMenuContext) {
+                    renderMenuFromData(state.lastMenuContext.title, state.lastMenuContext.items, true);
+                } else {
+                    renderMenuFromData("MAIN MENU // DOMD-TOOLKIT", fileSystem.root, true);
+                }
             }
-        }
-    };
-    document.addEventListener('keydown', handler);
-    document.addEventListener('click', handler); 
+        };
+        document.addEventListener('keydown', handler);
+        document.addEventListener('click', handler); 
+    }, 150);
 }
 
 async function displaySystemHeader() {
@@ -558,14 +586,33 @@ async function displaySystemHeader() {
     }
 }
 
+// [重大新增]：为 clearTerminal 增加一键跳过
 async function clearTerminal() {
     state.mode = 'BUSY';
+    state.skipRender = false;
     interactiveDiv.innerHTML = '';
-    
     outputDiv.innerHTML = ''; 
     state.menuStack = []; 
+
+    const skipHandler = (e) => {
+        if (e.type === 'click' || (e.type === 'keydown' && e.key === 'Enter')) {
+            state.skipRender = true;
+        }
+    };
+    
+    setTimeout(() => {
+        if (state.mode === 'BUSY') {
+            document.addEventListener('keydown', skipHandler);
+            document.addEventListener('click', skipHandler);
+        }
+    }, 150);
     
     await displaySystemHeader();
+    
+    document.removeEventListener('keydown', skipHandler);
+    document.removeEventListener('click', skipHandler);
+    state.skipRender = false;
+
     renderMenuFromData("MAIN MENU // DOMD-TOOLKIT", fileSystem.root, true);
 }
 
@@ -591,9 +638,19 @@ document.addEventListener('keydown', (e) => {
     else if (e.key === 'Enter') { e.preventDefault(); document.getElementById(`menu-${state.menuIndex}`).click(); }
 });
 
+// [重大新增]：为 bootSequence (开机主页) 增加一键跳过
 async function bootSequence() {
     state.isBooting = true;
+    state.skipRender = false;
     
+    const skipHandler = (e) => {
+        if (e.type === 'click' || (e.type === 'keydown' && e.key === 'Enter')) {
+            state.skipRender = true;
+        }
+    };
+    document.addEventListener('keydown', skipHandler);
+    document.addEventListener('click', skipHandler);
+
     await typeText(`BIOS CHECK: OK`, 5);
     await typeText(`INITIALIZING NETWORK...`, 5);
     await sleep(200);
@@ -617,11 +674,19 @@ async function bootSequence() {
     }
 
     const staticHeader = document.getElementById('static-header');
-    if (staticHeader) staticHeader.style.opacity = '1';
-    await sleep(500);
+    if (staticHeader && !state.skipRender) {
+        staticHeader.style.opacity = '1';
+        await sleep(500);
+    } else if (staticHeader) {
+        staticHeader.style.opacity = '1';
+    }
 
     await displaySystemHeader();
 
+    // 卸载事件，安全进入主菜单
+    document.removeEventListener('keydown', skipHandler);
+    document.removeEventListener('click', skipHandler);
+    state.skipRender = false;
     state.isBooting = false;
     renderMenuFromData("MAIN MENU // DOMD-TOOLKIT", fileSystem.root, true);
 }
