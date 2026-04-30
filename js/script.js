@@ -239,12 +239,13 @@ async function renderImage(src, altText = "IMAGE", extraClasses = "") {
         const maxScrollDistance = targetScroll - startScroll;
 
         // 根据配置计算扫描时间
-        let durationSec = imgHeight / speed.IMG_SCAN_SPEED;
+		let durationSec = imgHeight / speed.IMG_SCAN_SPEED;
         if (durationSec < speed.IMG_MIN_TIME) durationSec = speed.IMG_MIN_TIME;
         const durationMs = durationSec * 1000;
 
-        img.style.transition = `clip-path ${durationSec}s linear`;
-        img.classList.add('loaded');
+        // 【关键修改：把动画赋予 container，而不是 img】
+        container.style.transition = `clip-path ${durationSec}s linear`;
+        container.classList.add('loaded');
 
         if (maxScrollDistance > 0) {
             const stepTime = state.speedMode === 'FAST' ? 20 : 40;
