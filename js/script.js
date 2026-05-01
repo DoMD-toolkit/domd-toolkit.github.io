@@ -39,7 +39,7 @@ let state = {
     isBooting: true,
     mode: 'NONE',
     speedMode: 'NORMAL',              
-    skipRender: false,     // [核心开关]：控制是否光速跳过渲染
+    skipRender: false,     // [核心开关]：控制是否进入“超载刷屏”模式
     menuIndex: 0,
     currentMenuOptions: [],
     menuStack: [],
@@ -71,23 +71,25 @@ async function typeText(text, customDelay = null, className = '') {
 
     const speed = getSpeed();
     const delay = customDelay !== null ? customDelay : speed.TEXT_DELAY; 
-    const step = speed.TEXT_STEP; 
     let i = 0;
     
     let burstCount = 0;
     let currentBurstTarget = Math.floor(Math.random() * 4) + 2; 
 
     while (i < text.length) {
-        if (state.skipRender) {
-            lineDiv.textContent += text.substring(i);
-            scrollToBottom();
-            break; 
-        }
-
-        const chunk = text.substring(i, i + step);
+        // [极速刷屏机制]：跳过时，一口气吐出 30 个字的大块
+        let currentStep = state.skipRender ? 30 : speed.TEXT_STEP;
+        const chunk = text.substring(i, i + currentStep);
         lineDiv.textContent += chunk;
-        i += step;
+        i += currentStep;
         burstCount++;
+
+        // 如果开启了跳过模式，强制渲染并进行极微小的等待，制造刷屏视觉残留
+        if (state.skipRender) {
+            scrollToBottom();
+            await new Promise(r => setTimeout(r, 5)); 
+            continue; 
+        }
 
         const isPunctuation = /[.!?。！？]/.test(chunk);
         const isSpace = /\s/.test(chunk);
@@ -137,19 +139,20 @@ async function typeTextHTML(htmlContent) {
                 target.appendChild(textNode);
                 const text = node.textContent;
                 let i = 0;
-                const step = speed.HTML_STEP; 
 
                 while (i < text.length) {
-                    if (state.skipRender) {
-                        textNode.textContent += text.substring(i);
-                        scrollToBottom();
-                        break;
-                    }
-
-                    const chunk = text.substring(i, i + step);
+                    // [极速刷屏机制]
+                    let currentStep = state.skipRender ? 30 : speed.HTML_STEP;
+                    const chunk = text.substring(i, i + currentStep);
                     textNode.textContent += chunk;
-                    i += step;
+                    i += currentStep;
                     burstCount++;
+
+                    if (state.skipRender) {
+                        scrollToBottom();
+                        await new Promise(r => setTimeout(r, 5));
+                        continue;
+                    }
 
                     const isPunctuation = /[.!?。！？]/.test(chunk);
                     const isSpace = /\s/.test(chunk);
@@ -198,7 +201,6 @@ function preloadImage(src, timeout = 10000) {
     });
 }
 
-// [重大修复]：把动画靶点从 img 移回 container，修复图片发黑不显示的 Bug
 async function renderImage(src, altText = "IMAGE", extraClasses = "") {
     await typeText(`>> DOWNLOADING: ${altText}...`, 5);
     const speed = getSpeed();
@@ -228,20 +230,10 @@ async function renderImage(src, altText = "IMAGE", extraClasses = "") {
         const targetScroll = screen.scrollHeight - screen.clientHeight;
         const maxScrollDistance = targetScroll - startScroll;
 
-        // [修复]：跳过时，必须对 container 操作，才能去掉那 100% 的裁切！
-        if (state.skipRender) {
-            container.style.transition = 'none';
-            container.classList.add('loaded');
-            if (maxScrollDistance > 0) screen.scrollTop = startScroll + maxScrollDistance;
-            scrollToBottom();
-            return; 
-        }
-
         let durationSec = imgHeight / speed.IMG_SCAN_SPEED;
         if (durationSec < speed.IMG_MIN_TIME) durationSec = speed.IMG_MIN_TIME;
         const durationMs = durationSec * 1000;
 
-        // [修复]：正常动画也要作用于 container
         container.style.transition = `clip-path ${durationSec}s linear`;
         container.classList.add('loaded');
 
@@ -251,8 +243,10 @@ async function renderImage(src, altText = "IMAGE", extraClasses = "") {
             
             for (let i = 1; i <= steps; i++) {
                 if (state.skipRender) {
-                    container.style.transition = 'none';
+                    // [极速坠落机制]：图片极速拉满并滑动
+                    container.style.transition = 'clip-path 0.15s cubic-bezier(0.2, 0.8, 0.2, 1)';
                     screen.scrollTop = startScroll + maxScrollDistance;
+                    await sleep(150); 
                     break;
                 }
                 const currentScanY = imgHeight * (i / steps);
@@ -263,7 +257,16 @@ async function renderImage(src, altText = "IMAGE", extraClasses = "") {
                 await sleep(stepTime); 
             }
         } else {
-            await sleep(durationMs); 
+            let waited = 0;
+            while(waited < durationMs) {
+                if (state.skipRender) {
+                    container.style.transition = 'clip-path 0.15s cubic-bezier(0.2, 0.8, 0.2, 1)';
+                    await sleep(150);
+                    break;
+                }
+                await sleep(50);
+                waited += 50;
+            }
         }
 
         scrollToBottom();
@@ -336,7 +339,11 @@ async function renderCodeBox(filename, codeLines) {
         }
         lineDiv.appendChild(document.createTextNode('\n'));
         
-        if (speed.CODE_LINE > 0 && !state.skipRender) {
+        // [极速刷行机制]
+        if (state.skipRender) {
+            scrollToBottom();
+            await new Promise(r => setTimeout(r, 5)); 
+        } else if (speed.CODE_LINE > 0) {
             scrollToBottom();
             await sleep(speed.CODE_LINE);
         } else if (i % 2 === 0) {
@@ -586,7 +593,6 @@ async function displaySystemHeader() {
     }
 }
 
-// [重大新增]：为 clearTerminal 增加一键跳过
 async function clearTerminal() {
     state.mode = 'BUSY';
     state.skipRender = false;
@@ -638,7 +644,6 @@ document.addEventListener('keydown', (e) => {
     else if (e.key === 'Enter') { e.preventDefault(); document.getElementById(`menu-${state.menuIndex}`).click(); }
 });
 
-// [重大新增]：为 bootSequence (开机主页) 增加一键跳过
 async function bootSequence() {
     state.isBooting = true;
     state.skipRender = false;
@@ -683,7 +688,6 @@ async function bootSequence() {
 
     await displaySystemHeader();
 
-    // 卸载事件，安全进入主菜单
     document.removeEventListener('keydown', skipHandler);
     document.removeEventListener('click', skipHandler);
     state.skipRender = false;
