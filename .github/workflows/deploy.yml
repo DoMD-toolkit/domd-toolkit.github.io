@@ -39,10 +39,11 @@ jobs:
 
       - name: Minify Assets
         run: |
-          mkdir -p dist/css dist/js dist/contents
+          mkdir -p dist/css dist/js dist/contents dist/member
           
           # 拷贝资源
           cp -r db images terminal dist/ 2>/dev/null || true
+          cp member/index.html dist/member/ 2>/dev/null || true
           
           # 压缩 JS (直接调用 node_modules 里的干净依赖)
           for f in js/*.js; do 
@@ -50,6 +51,8 @@ jobs:
             fn=$(basename "$f")
             ./node_modules/.bin/terser "$f" -o "dist/js/$fn" --compress --mangle
           done
+
+          ./node_modules/.bin/terser member/member.js -o "dist/member/member.js" --compress --mangle
           
           # 压缩 CSS (使用 postcss，彻底解决原先远程字体 @import 导致的警告)
           echo "module.exports = { plugins: [require('cssnano')] }" > postcss.config.js
