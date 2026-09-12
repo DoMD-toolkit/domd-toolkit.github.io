@@ -34,6 +34,25 @@ body {
     color: var(--phosphor-main);
 }
 
+/* =========================================
+   全局终端超链接样式 (Amber 琥珀黄荧光)
+   ========================================= */
+a,
+a:link,
+a:visited {
+    color: #ffcc00;
+    text-shadow: 0 0 5px #ffcc00;
+    text-decoration: underline;
+    cursor: pointer;
+}
+
+/* 悬停时增强荧光辉光感（可选） */
+a:hover {
+    color: #ffffff;
+    text-shadow: 0 0 2px #ffffff, 0 0 8px #ffcc00, 0 0 15px #ffcc00;
+}
+
+
 /* --- CRT 容器 --- */
 .crt-container {
     width: 95vw;
